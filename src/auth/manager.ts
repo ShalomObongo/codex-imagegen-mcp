@@ -245,13 +245,22 @@ export class AuthManager {
     });
   }
 
-  /** Persist a fresh login (replacing and revoking any previous one of ours). */
-  async saveLogin(tokens: TokenSet, method: LoginMethod): Promise<{ stored: StoredAuth; identity: ChatGptIdentity; revokedPrevious: boolean }> {
+  /**
+   * Persist a fresh login (replacing and revoking any previous one of ours). `onSaved` runs as soon
+   * as the credentials are on disk, before the old sign-in is revoked, so callers can report the
+   * sign-in as finished at the same moment status starts reporting it as signed in.
+   */
+  async saveLogin(
+    tokens: TokenSet,
+    method: LoginMethod,
+    onSaved?: (identity: ChatGptIdentity) => void,
+  ): Promise<{ stored: StoredAuth; identity: ChatGptIdentity; revokedPrevious: boolean }> {
     return withFileLock(this.o.lockFile, async () => {
       const previous = await readStoredAuth(this.o.authFile).catch(() => undefined);
       const stored = buildStoredAuth(tokens, method, new Date(this.now()));
       await writeStoredAuth(this.o.authFile, stored);
       this.rejected.clear();
+      onSaved?.(identityFromTokens(stored.tokens.id_token, stored.tokens.access_token));
       let revokedPrevious = false;
       if (previous && previous.tokens.refresh_token !== stored.tokens.refresh_token) {
         revokedPrevious = await revokeToken(this.o.oauth, previous.tokens.refresh_token, "refresh_token");

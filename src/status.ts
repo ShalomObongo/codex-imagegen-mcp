@@ -19,14 +19,21 @@ export interface StatusReport {
 
 export async function collectStatus(
   deps: { auth: AuthManager; images: ImagesClient },
-  options: { checkUsage: boolean; signal?: AbortSignal; pendingLogin?: PendingLogin; lastLogin?: LoginOutcome },
+  options: {
+    checkUsage: boolean;
+    signal?: AbortSignal;
+    /** The server's sign-in state; read after the credentials so both describe the same moment. */
+    login?: { readonly pendingLogin?: PendingLogin | undefined; readonly lastOutcome?: LoginOutcome | undefined };
+  },
 ): Promise<StatusReport> {
   const sources = await deps.auth.inspect();
   const active = AuthManager.activeSource(sources);
   const report: StatusReport = { signedIn: Boolean(active), sources };
   if (active) report.active = active;
-  if (options.pendingLogin) report.pendingLogin = options.pendingLogin;
-  if (options.lastLogin) report.lastLogin = options.lastLogin;
+  const pending = options.login?.pendingLogin;
+  const last = options.login?.lastOutcome;
+  if (pending) report.pendingLogin = pending;
+  if (last) report.lastLogin = last;
   if (active && options.checkUsage) {
     try {
       report.usage = await deps.images.getUsage(options.signal ? { signal: options.signal } : {});

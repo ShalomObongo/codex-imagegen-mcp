@@ -28,13 +28,15 @@ export async function writeFileAtomic(file: string, data: string | Uint8Array, m
   const handle = await fs.open(tmp, "w", mode);
   try {
     await handle.writeFile(data);
+    // Set the mode before the rename (umask may have narrowed it), so the file is final the
+    // moment it becomes visible and nothing else awaits after that.
+    await handle.chmod(mode).catch(() => undefined);
     await handle.sync();
   } finally {
     await handle.close();
   }
   try {
     await fs.rename(tmp, file);
-    await fs.chmod(file, mode).catch(() => undefined);
   } catch (err) {
     await fs.rm(tmp, { force: true }).catch(() => undefined);
     throw err;

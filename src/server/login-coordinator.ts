@@ -65,13 +65,25 @@ export class LoginCoordinator {
     const entry = { info, cancel };
     this.pending = entry;
     logger.info("sign-in started", { method });
+    let saved = false;
     result
-      .then((tokens) => auth.saveLogin(tokens, method))
+      .then((tokens) =>
+        // Record the outcome the moment the credentials are written, so auth_status never shows
+        // "signed in" next to a sign-in that still looks in progress.
+        auth.saveLogin(tokens, method, (identity) => {
+          saved = true;
+          this.last = { ok: true, message: `Signed in${identity.email ? ` as ${identity.email}` : ""}${identity.planType ? ` (ChatGPT ${identity.planType})` : ""}.`, at: Date.now() };
+          if (this.pending === entry) this.pending = undefined;
+        }),
+      )
       .then(({ identity }) => {
-        this.last = { ok: true, message: `Signed in${identity.email ? ` as ${identity.email}` : ""}${identity.planType ? ` (ChatGPT ${identity.planType})` : ""}.`, at: Date.now() };
         logger.info("sign-in completed", { method, plan: identity.planType });
       })
       .catch((err: unknown) => {
+        if (saved) {
+          logger.warn("sign-in saved, but finishing up failed", { method, message: err instanceof Error ? err.message : String(err) });
+          return;
+        }
         const e = toImagegenError(err, "login_failed");
         this.last = { ok: false, message: e.message, at: Date.now() };
         logger.warn("sign-in failed", { method, kind: e.kind, message: e.message });

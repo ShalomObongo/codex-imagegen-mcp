@@ -59,6 +59,7 @@ One installer for every coding tool.
 
 ### Fixed
 - `uninstall opencode` removed any server named `imagegen`, even one that ran something else. Uninstall now removes only entries that launch this package, unless you pass `--force`.
+- `auth_status` right after a background `sign_in` could say "Signed in: yes" next to a stale "Sign-in in progress" (an occasional CI failure). The server now records the outcome as soon as the credentials are written, and the status reads both at the same moment.
 
 ## [0.1.2] - 2026-09-23
 

@@ -307,12 +307,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     },
     async (args, extra) => {
       try {
-        const options: Parameters<typeof collectStatus>[1] = { checkUsage: args.check_usage, signal: extra.signal };
-        const pending = ctx.login.pendingLogin;
-        if (pending) options.pendingLogin = pending;
-        const last = ctx.login.lastOutcome;
-        if (last) options.lastLogin = last;
-        const report = await collectStatus(ctx, options);
+        const report = await collectStatus(ctx, { checkUsage: args.check_usage, signal: extra.signal, login: ctx.login });
         return { content: [{ type: "text", text: formatStatus(report) }] };
       } catch (err) {
         return errorResult(toImagegenError(err));
