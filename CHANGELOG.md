@@ -4,8 +4,61 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-23
+
+One installer for every coding tool.
+
 ### Added
-- **On npm:** `npm install --global codex-imagegen-mcp`. 0.1.2 was published from the attested GitHub-release tarball. From now on the release workflow publishes each version through npm trusted publishing (OIDC): no tokens, and npm attaches signed provenance automatically.
+- **An interactive installer.** In a terminal, `codex-imagegen-mcp install`:
+  - finds the coding tools on the machine and pre-selects them;
+  - asks for the scope (all projects, or this project), the Agent Skill and the launch method;
+  - shows a review of every file it will create or change, then applies it once you confirm;
+  - prints the JSON to paste for tools configured only in their UI, offers a ChatGPT sign-in, and ends with next steps for each tool.
+
+  `uninstall` without arguments works the same way in reverse.
+- **26 supported tools.**
+  - Terminal agents: OpenCode, Claude Code, Codex, Gemini CLI, GitHub Copilot CLI, Amp, Goose, Factory Droid, Qwen Code, JetBrains Junie and Augment (Auggie CLI).
+  - Editors: Cursor, VS Code, VS Code Insiders, VSCodium, Devin Desktop (formerly Windsurf), legacy Windsurf, Zed, Kiro, Google Antigravity and Visual Studio (Windows).
+  - Desktop apps: Claude Desktop.
+  - Editor extensions: Cline, Zoo Code / Roo Code and Kilo Code.
+  - JetBrains AI Assistant, which is configured in its UI, gets the JSON to paste.
+
+  Each tool gets its own config format and timeout, in its own unit. For example, Codex gets `tool_timeout_sec = 300` and `startup_timeout_sec = 60`, Copilot CLI `timeout: 300000` and Zed, Cline and Goose `timeout: 300`. Paths come in per-OS variants, and the installer honours `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `COPILOT_HOME` and similar overrides.
+- **Scripted use:**
+  - `install <tool…>`, `install --all` (or `-y`), `install --list [--json]`, `--project`, `--launch auto|node|npx|global`, `--skill-only`, `--dry-run` and `--json`;
+  - `uninstall <tool…> | --all`;
+  - `config <tool>` for any supported tool.
+- **Safe edits.**
+  - JSONC is edited in place, keeping comments and formatting. Only the `[mcp_servers.imagegen]` table is replaced in Codex's TOML. Goose's YAML keeps its comments.
+  - Every edit is re-parsed and verified before it is written, and each file is backed up, written atomically with its permissions kept, and followed through symlinks.
+  - Entries that don't launch this package are left alone unless you pass `--force`, and broken files are reported and skipped.
+  - Claude Code's user config goes through `claude mcp add-json` when the CLI can be run.
+- **A robust launch command.**
+  - Global installs use an absolute Node and script path, so GUI apps without the shell `PATH` work too.
+  - Project files, and runs through npx, get `npx -y codex-imagegen-mcp@0.2 serve`.
+  - Windows commands are wrapped as `cmd /c`.
+  - `CODEX_HOME`, `XDG_DATA_HOME` and the `CODEX_IMAGEGEN_*` location variables are pinned into global entries. Copilot CLI, Codex, Cline and others pass servers only part of the environment.
+- **Skill placement across tools.** The skill goes into the fewest folders that every selected tool reads, preferring the shared `~/.agents/skills`. Claude Code, Qwen Code, Kiro and Antigravity get copies in their own folders, and Claude Desktop gets `imagegen-mcp-skill.zip` to upload.
+- **`doctor` checks every installation.** For each tool with imagegen configured, at user or project scope, it checks the launch command and script and that the entry is enabled. It also reports the skill copies.
+- **On npm:** `npm install --global codex-imagegen-mcp`. 0.1.2 was published from the attested GitHub-release tarball. From this release on, the release workflow publishes each version through npm trusted publishing (OIDC): no tokens, and npm attaches signed provenance automatically.
+- Installer screenshots from a real terminal session, and `scripts/render-installer-screens.py` to rebuild them.
+
+### Changed
+- **The skill is now called `imagegen-mcp`** (it was `imagegen`). Codex ships a system skill named `imagegen`, and Codex and Cursor listed both. The installer replaces copies it installed earlier. The MCP server key (`imagegen`), the tool names and the `imagegen://skill/*` resources are unchanged.
+- **`install` without tool names starts the interactive installer.** It used to install into opencode. In scripts it now exits with status 2 and a hint, so name the tool: `install opencode`.
+- For OpenCode, the skill now goes to `~/.agents/skills/imagegen-mcp`, which OpenCode and most other tools read, instead of `~/.config/opencode/skills/imagegen`.
+- `uninstall` removes a skill copy only when no tool that stays installed still reads it.
+- Documentation:
+  - CLIENTS is now the installer guide and support matrix, with files, timeouts and skill folders per tool.
+  - The README quick start uses the installer.
+  - INSTALLER.md holds the design notes.
+  - DEVELOPMENT explains how to add a client.
+
+### Removed
+- The opencode-only installer module and the hand-written per-client snippets. `config <tool>` now prints snippets from the client registry.
+
+### Fixed
+- `uninstall opencode` removed any server named `imagegen`, even one that ran something else. Uninstall now removes only entries that launch this package, unless you pass `--force`.
 
 ## [0.1.2] - 2026-09-23
 
@@ -96,7 +149,8 @@ First release.
   - A real device-code request (`XXXX-XXXXX` code, 5 s interval).
 - opencode 1.18.32: `opencode mcp list` shows the server connected, and the skill loads. Ran end to end with `openai/gpt-5.5` (skill → generate, transparent) and `github-copilot/claude-sonnet-5` (auth_status → 16:9 generate + transparent edit).
 
-[Unreleased]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ShalomObongo/codex-imagegen-mcp/releases/tag/v0.1.0
