@@ -76,7 +76,7 @@ export function clientSnippet(client: ClientId, serverName: string, command: rea
         body: json({ mcp: { [serverName]: { type: "local", command: [...command], enabled: true, timeout: 300000 } } }),
         notes: [
           "timeout applies to every MCP request; progress notifications reset it, 300000 ms is a safe ceiling.",
-          SKILL_NOTE("~/.config/opencode/skills/imagegen"),
+          SKILL_NOTE("~/.config/opencode/skills/imagegen-mcp"),
         ],
       };
     case "claude-code":
@@ -85,7 +85,7 @@ export function clientSnippet(client: ClientId, serverName: string, command: rea
         title: "Claude Code",
         location: "run in a terminal",
         body: `claude mcp add --scope user ${shellQuote(serverName)} -- ${command.map(shellQuote).join(" ")}`,
-        notes: ["For long generations, start Claude Code with MCP_TOOL_TIMEOUT=300000.", SKILL_NOTE("~/.claude/skills/imagegen")],
+        notes: ["For long generations, start Claude Code with MCP_TOOL_TIMEOUT=300000.", SKILL_NOTE("~/.claude/skills/imagegen-mcp")],
       };
     case "claude-desktop":
       return {

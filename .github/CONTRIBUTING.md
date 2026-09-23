@@ -28,7 +28,7 @@ You need Node.js 22 or newer. [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) cove
 1. **Branch** from `main`.
 2. **Keep it focused.** One logical change per pull request is easier to review and to revert.
 3. **Test it.** Add or update tests in `test/` for any behaviour change. Tests run against `test/helpers/mock-openai.ts` and an isolated temp home, so they never touch real credentials.
-4. **Update the docs.** README, `docs/`, and the skill in `skill/imagegen/` if behaviour, options or output change. Keep limits in tool descriptions too, because some clients strip JSON-Schema constraints.
+4. **Update the docs.** README, `docs/`, and the skill in `skill/imagegen-mcp/` if behaviour, options or output change. Keep limits in tool descriptions too, because some clients strip JSON-Schema constraints.
 5. **Add a `CHANGELOG.md` entry** that describes the change from the user's side.
 
 ### Conventions

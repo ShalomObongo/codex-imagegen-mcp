@@ -1,5 +1,5 @@
 ---
-name: imagegen
+name: imagegen-mcp
 description: Generate or edit raster images (photos, illustrations, textures, sprites, icons, product shots, mockups, transparent cutouts) with the imagegen MCP tools, which use the user's ChatGPT plan through the same image service as OpenAI Codex's built-in image tool — no API key. Use when the task benefits from an AI-created bitmap, when transforming an existing image, or when deriving variants from reference images. Do not use when the result is better made as SVG/vector/HTML/CSS/canvas code or by extending an existing icon or logo system in the repo.
 ---
 

@@ -19,7 +19,7 @@ How the image generation in OpenAI Codex really works. These findings come from 
 ```mermaid
 flowchart LR
     subgraph codex ["Codex app / CLI"]
-        skill["imagegen skill<br/>SKILL.md: when and how to prompt"]:::ochre
+        skill["imagegen-mcp skill<br/>SKILL.md: when and how to prompt"]:::ochre
         tool["built-in tool<br/>image_gen.imagegen"]:::rust
         model["the model"]:::ink
     end

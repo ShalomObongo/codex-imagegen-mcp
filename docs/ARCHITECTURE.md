@@ -64,7 +64,7 @@ flowchart TB
 | `src/install/` | The opencode installer (JSONC edits, skill copy) and snippets for other clients |
 | `src/doctor.ts` | Environment diagnostics |
 | `src/cli.ts` | The command-line entry point; `serve` is the MCP entry |
-| `skill/imagegen/` | The Agent Skill shipped with the server |
+| `skill/imagegen-mcp/` | The Agent Skill shipped with the server |
 | `upstream/` | Byte-exact copy of Codex's original skill, for provenance and diffing |
 | `scripts/compose-doc-art.py` | Builds the documentation artwork from raw generations |
 

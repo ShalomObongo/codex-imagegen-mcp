@@ -60,7 +60,7 @@ describe("opencode installer", () => {
     assert.deepEqual(cfg.mcp.imagegen, { type: "local", command: COMMAND, enabled: true, timeout: 300_000 });
     assert.equal(cfg.mcp.other.url, "https://example.com/mcp");
     assert.equal(await fs.readFile(`${file}.codex-imagegen-mcp.bak`, "utf8"), JSONC);
-    const skillDir = path.join(configDir, "skills", "imagegen");
+    const skillDir = path.join(configDir, "skills", "imagegen-mcp");
     assert.equal(report.skillDir, skillDir);
     await fs.access(path.join(skillDir, "SKILL.md"));
     await fs.access(path.join(skillDir, "references", "tools.md"));
@@ -90,14 +90,14 @@ describe("opencode installer", () => {
 
   test("leaves a user's own skill of the same name alone and warns about duplicates", async () => {
     const { root, configDir } = await setup();
-    const userSkill = path.join(configDir, "skills", "imagegen");
+    const userSkill = path.join(configDir, "skills", "imagegen-mcp");
     await fs.mkdir(userSkill, { recursive: true });
-    await fs.writeFile(path.join(userSkill, "SKILL.md"), "---\nname: imagegen\ndescription: mine\n---\n");
+    await fs.writeFile(path.join(userSkill, "SKILL.md"), "---\nname: imagegen-mcp\ndescription: mine\n---\n");
     const report = await installOpencode(base(configDir, root));
     assert.ok(report.steps.some((s) => s.action === "Skill skipped"));
     assert.ok(report.warnings.some((w) => /not installed by codex-imagegen-mcp/.test(w)));
-    assert.equal(await fs.readFile(path.join(userSkill, "SKILL.md"), "utf8"), "---\nname: imagegen\ndescription: mine\n---\n");
-    const found = await findSkillsNamed("imagegen", [path.join(configDir, "skills")]);
+    assert.equal(await fs.readFile(path.join(userSkill, "SKILL.md"), "utf8"), "---\nname: imagegen-mcp\ndescription: mine\n---\n");
+    const found = await findSkillsNamed("imagegen-mcp", [path.join(configDir, "skills")]);
     assert.deepEqual(found, [userSkill]);
   });
 
@@ -105,7 +105,7 @@ describe("opencode installer", () => {
     const root = await tempDir();
     const report = await installOpencode({ ...base(root, root), scope: "project", configDir: undefined });
     assert.equal(report.configFile, path.join(root, "opencode.json"));
-    await fs.access(path.join(root, ".opencode", "skills", "imagegen", "SKILL.md"));
+    await fs.access(path.join(root, ".opencode", "skills", "imagegen-mcp", "SKILL.md"));
   });
 
   test("uninstall removes the entry and only our skill", async () => {
@@ -118,7 +118,7 @@ describe("opencode installer", () => {
     assert.equal(cfg.mcp.imagegen, undefined);
     assert.ok(cfg.mcp.other);
     assert.match(text, /comments must survive/);
-    await assert.rejects(fs.access(path.join(configDir, "skills", "imagegen")));
+    await assert.rejects(fs.access(path.join(configDir, "skills", "imagegen-mcp")));
   });
 });
 

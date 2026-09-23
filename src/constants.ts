@@ -11,9 +11,14 @@ export const VERSION = pkg.version;
 
 /** Package root: the directory holding package.json, dist/ and skill/. */
 export const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-/** The bundled Agent Skill that ships with this package. */
-export const SKILL_SOURCE_DIR = path.join(PACKAGE_ROOT, "skill", "imagegen");
-export const SKILL_NAME = "imagegen";
+/**
+ * The bundled Agent Skill. It is called `imagegen-mcp`, not `imagegen`, because Codex ships a
+ * system skill named `imagegen` that Codex and Cursor list alongside ours.
+ */
+export const SKILL_NAME = "imagegen-mcp";
+export const SKILL_SOURCE_DIR = path.join(PACKAGE_ROOT, "skill", SKILL_NAME);
+/** Folder names used by earlier releases; copies carrying our marker are migrated on install. */
+export const LEGACY_SKILL_NAMES: readonly string[] = ["imagegen"];
 
 /** Default key used for the server in MCP client configs (tools appear as `imagegen_*` in opencode). */
 export const DEFAULT_SERVER_NAME = "imagegen";

@@ -122,10 +122,10 @@ export async function runDoctor(deps: ServerDeps, options: { serverName: string;
       status: skills.length === 1 ? "ok" : "warn",
       detail:
         skills.length === 0
-          ? "no imagegen skill found (run `install opencode`)"
+          ? `no ${SKILL_NAME} skill found (run \`install opencode\`)`
           : skills.length === 1
             ? skills[0]!
-            : `${skills.length} skills named imagegen (opencode picks one unpredictably): ${skills.join(", ")}`,
+            : `${skills.length} skills named ${SKILL_NAME} (opencode picks one unpredictably): ${skills.join(", ")}`,
     });
   }
   return checks;

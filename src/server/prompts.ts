@@ -3,7 +3,7 @@ import type { GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
 import * as z from "zod/v4";
 
 const CHECKLIST = [
-  "Follow the imagegen skill if it is available (otherwise read the imagegen://skill/SKILL.md resource).",
+  "Follow the imagegen-mcp skill if it is available (otherwise read the imagegen://skill/SKILL.md resource).",
   "Classify the request (use case + asset type) and write a structured prompt: Use case, Asset type, Primary request, Scene/backdrop, Subject, Style/medium, Composition/framing, Lighting/mood, Color palette, Text (verbatim), Constraints, Avoid.",
   "Keep the user's details; only add detail that materially improves the result.",
   "Pick aspect_ratio from the intended use; use background=\"transparent\" when the asset needs alpha.",

@@ -63,4 +63,4 @@ jobs:
           npm install --global ./codex-imagegen-mcp-*.tgz
           codex-imagegen-mcp --version
           codex-imagegen-mcp config cursor
-          test -f "$(npm root --global)/codex-imagegen-mcp/skill/imagegen/SKILL.md"
+          test -f "$(npm root --global)/codex-imagegen-mcp/skill/imagegen-mcp/SKILL.md"

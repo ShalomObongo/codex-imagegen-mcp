@@ -24,7 +24,7 @@ The server is a local **stdio** MCP server, so any MCP client can run it: many t
 Every client needs two things:
 
 1. **The launch command.** After the [one-line install](../README.md#quick-start) (or `npm link` from a checkout) it's `codex-imagegen-mcp serve`; straight from a checkout it's `node /path/to/codex-imagegen-mcp/dist/src/cli.js serve`. `codex-imagegen-mcp config <client>` prints the exact snippet for your machine, with absolute paths where a GUI app needs them.
-2. **Optionally, the Agent Skill** in `skill/imagegen/`. It teaches the agent the prompting and save-path workflow. Clients without skill support can read the same content from the server as `imagegen://skill/SKILL.md`, and the essentials are also in the server's MCP instructions.
+2. **Optionally, the Agent Skill** in `skill/imagegen-mcp/`. It teaches the agent the prompting and save-path workflow. Clients without skill support can read the same content from the server as `imagegen://skill/SKILL.md`, and the essentials are also in the server's MCP instructions.
 
 Then sign in once with `codex-imagegen-mcp login`, unless Codex or opencode is already signed in with ChatGPT. See [Authentication](AUTH.md).
 

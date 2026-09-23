@@ -6,8 +6,8 @@ This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 This product includes material adapted from OpenAI Codex (https://github.com/openai/codex),
 Copyright OpenAI, licensed under the Apache License, Version 2.0:
 
-  - skill/imagegen/SKILL.md, skill/imagegen/references/prompting.md and
-    skill/imagegen/references/sample-prompts.md are adapted from the "imagegen" system skill
+  - skill/imagegen-mcp/SKILL.md, skill/imagegen-mcp/references/prompting.md and
+    skill/imagegen-mcp/references/sample-prompts.md are adapted from the "imagegen" system skill
     bundled with Codex 0.155.0-alpha.16. The prompting guidance and prompt recipes are retained;
     the instructions were rewritten for this project's MCP tools.
   - src/images/chroma.ts is a TypeScript port of the skill's scripts/remove_chroma_key.py.

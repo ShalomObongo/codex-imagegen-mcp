@@ -1,6 +1,6 @@
 /**
  * Sent in the MCP `initialize` result. opencode injects it into the system prompt (inside
- * <mcp_instructions>), so it is kept short; detailed guidance lives in the imagegen skill.
+ * <mcp_instructions>), so it is kept short; detailed guidance lives in the imagegen-mcp skill.
  */
 export const SERVER_INSTRUCTIONS = `Image generation and editing through the user's ChatGPT plan — the same image service OpenAI Codex's built-in image tool uses (no API key).
 
@@ -16,4 +16,4 @@ Rules of thumb:
 - Files are saved to disk and the path is returned. For project assets pass output_path inside the workspace; existing files are never overwritten unless overwrite=true.
 - Check the attached preview before finishing, and report saved paths.
 - If a tool says the user is not signed in, call sign_in (or ask the user to run the login command it names). On a usage-limit error, stop and tell the user when it resets.
-- For detailed prompting guidance, load the "imagegen" skill if available, or read the imagegen://skill/SKILL.md resource.`;
+- For detailed prompting guidance, load the "imagegen-mcp" skill if available, or read the imagegen://skill/SKILL.md resource.`;

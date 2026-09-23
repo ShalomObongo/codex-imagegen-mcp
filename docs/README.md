@@ -59,7 +59,7 @@ codex-imagegen-mcp puts the image generation of OpenAI Codex into any MCP client
 flowchart LR
     agent["Your coding agent<br/>opencode · Claude Code · Cursor · VS Code"]:::ink
     server["codex-imagegen-mcp<br/>local stdio MCP server"]:::rust
-    skill["imagegen skill<br/>how to prompt, where to save"]:::ochre
+    skill["imagegen-mcp skill<br/>how to prompt, where to save"]:::ochre
     oauth["auth.openai.com<br/>ChatGPT sign-in"]:::teal
     backend["chatgpt.com/backend-api/codex<br/>/images/generations · /images/edits"]:::teal
     files[("your workspace<br/>assets/hero.png")]:::cream

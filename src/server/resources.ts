@@ -74,11 +74,11 @@ export function registerResources(server: McpServer, ctx: ToolContext): void {
       `skill:${relative}`,
       `imagegen://skill/${relative}`,
       {
-        title: relative === "SKILL.md" ? "imagegen skill (how to use these tools well)" : `imagegen skill: ${relative}`,
+        title: relative === "SKILL.md" ? "imagegen-mcp skill (how to use these tools well)" : `imagegen-mcp skill: ${relative}`,
         description:
           relative === "SKILL.md"
             ? "Workflow and prompting guidance for image generation. Read this if your client does not load Agent Skills."
-            : "Reference material for the imagegen skill.",
+            : "Reference material for the imagegen-mcp skill.",
         mimeType: "text/markdown",
       },
       async (uri): Promise<ReadResourceResult> => ({

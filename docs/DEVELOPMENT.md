@@ -28,7 +28,7 @@ Contribution guidelines, commit style and the pull-request checklist are in [CON
 ```text
 src/             TypeScript sources (see ARCHITECTURE.md)
 test/            node:test suites; test/helpers/mock-openai.ts mocks auth.openai.com + the ChatGPT backend
-skill/imagegen/  the Agent Skill shipped with the server
+skill/imagegen-mcp/  the Agent Skill shipped with the server
 upstream/        byte-exact copy of the Codex skill it was adapted from
 scripts/         compose-doc-art.py builds docs/assets from raw generations
 docs/            this documentation; docs/assets holds the artwork
@@ -133,7 +133,7 @@ Paper grain is seeded, so reruns are byte-stable.
 ## Updating from upstream Codex
 
 1. **Extract the current skill:** `CODEX_HOME=$(mktemp -d) /Applications/ChatGPT.app/Contents/Resources/codex debug prompt-input hi >/dev/null`. This installs the embedded system skills into `$CODEX_HOME/skills/.system/`.
-2. **Diff and port.** Compare that `imagegen/` with `upstream/codex-imagegen-skill/`, update the copy, and port the relevant guidance into `skill/imagegen/`.
+2. **Diff and port.** Compare that `imagegen/` with `upstream/codex-imagegen-skill/`, update the copy, and port the relevant guidance into `skill/imagegen-mcp/`.
 3. **Check the tool.** Look at `codex-rs/ext/image-generation/src/tool.rs` upstream for changes to the request body, model id or limits.
 
 ## Releasing

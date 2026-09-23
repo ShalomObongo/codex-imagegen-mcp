@@ -165,7 +165,7 @@ describe("MCP server over stdio", () => {
     assert.ok(blob && "blob" in blob && blob.blob.length > 0);
     const skill = await client.readResource({ uri: "imagegen://skill/SKILL.md" });
     const md = skill.contents[0];
-    assert.match(md && "text" in md ? md.text : "", /^---\nname: imagegen/);
+    assert.match(md && "text" in md ? md.text : "", /^---\nname: imagegen-mcp\n/);
     await assert.rejects(client.readResource({ uri: "imagegen://images/img_nope" }), /Unknown image id/);
   });
 
