@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+# local scratch / live-test artifacts
+tmp/
+output/
+.env
+.env.*

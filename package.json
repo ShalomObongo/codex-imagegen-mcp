@@ -1,0 +1,54 @@
+{
+  "name": "codex-imagegen-mcp",
+  "version": "0.1.0",
+  "description": "MCP server + Agent Skill that brings the OpenAI Codex image generation tool (gpt-image-2 via your ChatGPT plan, or the OpenAI Images API) to any MCP client: opencode, Claude Code, Cursor, and more.",
+  "license": "Apache-2.0",
+  "author": "Shalom Obongo",
+  "type": "module",
+  "bin": {
+    "codex-imagegen-mcp": "dist/src/cli.js"
+  },
+  "main": "dist/src/server.js",
+  "files": [
+    "dist/src",
+    "skill",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json && chmod +x dist/src/cli.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test --test-concurrency=1 dist/test/",
+    "test:unit": "npm run build && node --test --test-concurrency=1 dist/test/ --test-skip-pattern=integration",
+    "start": "node dist/src/cli.js serve",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "image-generation",
+    "gpt-image-2",
+    "codex",
+    "chatgpt",
+    "opencode",
+    "agent-skill"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "jpeg-js": "^0.4.4",
+    "jsonc-parser": "^3.3.1",
+    "pngjs": "^7.0.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/pngjs": "^6.0.5",
+    "typescript": "^7.0.2"
+  }
+}
