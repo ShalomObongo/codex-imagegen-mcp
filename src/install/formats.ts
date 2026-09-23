@@ -296,8 +296,17 @@ export function editConfig(format: ConfigFormat, text: string | undefined, keyPa
   if (text === undefined && value === undefined) return "";
   const creating = text === undefined || (text.trim() === "" && value !== undefined);
   const before = creating ? {} : adapter.parse(text);
-  const next = creating ? adapter.create(keyPath, value, template) : adapter.update(text, keyPath, value);
-  const after = adapter.parse(next);
+  let next = creating ? adapter.create(keyPath, value, template) : adapter.update(text, keyPath, value);
+  let after = adapter.parse(next);
+  if (value === undefined && format !== "toml") {
+    // Don't leave an empty servers map behind (TOML edits stay limited to our own table).
+    for (let depth = keyPath.length - 1; depth > 0; depth--) {
+      const parent = getIn(after, keyPath.slice(0, depth));
+      if (!isPlainObject(parent) || Object.keys(parent).length > 0) break;
+      next = adapter.update(next, keyPath.slice(0, depth), undefined);
+      after = adapter.parse(next);
+    }
+  }
   const expectedRest = creating ? without({ ...template }, keyPath) : without(before, keyPath);
   if (!sameValue(getIn(after, keyPath), value) || !sameValue(without(after, keyPath), expectedRest)) {
     throw new ConfigEditError("the edit could not be verified, so nothing was written");

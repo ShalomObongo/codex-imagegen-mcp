@@ -8,6 +8,7 @@ import { parse as parseYaml } from "yaml";
 import { PACKAGE_ROOT, SKILL_NAME } from "../src/constants.js";
 import { findClient, type Detection } from "../src/install/clients.js";
 import type { InstallContext, Scope } from "../src/install/context.js";
+import { NOT_DETECTED } from "../src/install/detect.js";
 import { resolveLaunch, type LaunchMode, type Runtime } from "../src/install/launch.js";
 import { applyPlan, BACKUP_SUFFIX, planInstall, planUninstall, type ConfigChange, type InstallOptions, type Plan } from "../src/install/plan.js";
 import { SKILL_MARKER } from "../src/install/skills.js";
@@ -101,7 +102,8 @@ describe("install engine", () => {
     assert.equal((await readJson(path.join(home, ".claude.json"))).mcpServers.imagegen.command, RUNTIME.node);
     const codex = parseToml(await fs.readFile(path.join(home, ".codex", "config.toml"), "utf8")) as Record<string, any>;
     assert.equal(codex.mcp_servers.imagegen.tool_timeout_sec, 300);
-    const goose = parseYaml(await fs.readFile(path.join(home, ".config", "goose", "config.yaml"), "utf8"));
+    const gooseFile = findClient("goose")!.configs(ctx, "global", NOT_DETECTED)[0]!.files[0]!;
+    const goose = parseYaml(await fs.readFile(gooseFile, "utf8"));
     assert.equal(goose.extensions.imagegen.cmd, RUNTIME.node);
 
     // Claude Code only reads ~/.claude/skills; the rest share ~/.agents/skills.
@@ -188,14 +190,14 @@ describe("install engine", () => {
     const kept = partial.changes.find((c) => c.kind === "skill");
     assert.equal(kept?.action, "keep", "OpenCode and Cursor still read ~/.claude/skills");
     await applyPlan(partial);
-    assert.equal((await readJson(path.join(home, ".claude.json"))).mcpServers.imagegen, undefined);
+    assert.equal((await readJson(path.join(home, ".claude.json"))).mcpServers?.imagegen, undefined, "removed (and the empty map pruned)");
     assert.equal((await readJson(path.join(home, ".gemini", "settings.json"))).mcpServers.imagegen.command, "python");
     assert.ok(await exists(skill));
 
     const rest = await planUninstall({ ...base, clients: [findClient("opencode")!, findClient("cursor")!] });
     await applyPlan(rest);
     assert.equal(await exists(skill), false);
-    assert.equal((await readJson(path.join(home, ".cursor", "mcp.json"))).mcpServers.imagegen, undefined);
+    assert.deepEqual(await readJson(path.join(home, ".cursor", "mcp.json")), {});
   });
 
   test("project scope: npx, no machine-specific env, shared files written once", async () => {

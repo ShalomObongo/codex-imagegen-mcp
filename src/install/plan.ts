@@ -7,7 +7,7 @@ import { PACKAGE_NAME, SKILL_SOURCE_DIR } from "../constants.js";
 import { writeFileAtomic } from "../util/fs.js";
 import { sleep } from "../util/http.js";
 import { availableClients, type ClientDefinition, type ConfigSpec, type Detection } from "./clients.js";
-import { realpathOr, which, type InstallContext, type Scope } from "./context.js";
+import { realpathOr, tildify, which, type InstallContext, type Scope } from "./context.js";
 import { NOT_DETECTED } from "./detect.js";
 import { ConfigEditError, editConfig, getIn, isPlainObject, parseConfig, renderSnippet, sameValue } from "./formats.js";
 import { adaptLaunch, formatCommand, type Launch, type Runtime } from "./launch.js";
@@ -140,6 +140,20 @@ function isOurScript(file: string): boolean {
 /** Whether an existing entry launches this package (so we may update or remove it). */
 export function isOurEntry(entry: unknown): boolean {
   return launchStrings(entry).some((s) => s.includes(PACKAGE_NAME) || isOurScript(s));
+}
+
+/** The argv an entry launches, across the entry shapes in the registry. */
+export function entryArgv(entry: unknown): string[] {
+  if (!isPlainObject(entry)) return [];
+  const cmd = entry.command ?? entry.cmd;
+  if (Array.isArray(cmd)) return cmd.filter((x): x is string => typeof x === "string");
+  const args = Array.isArray(entry.args) ? entry.args.filter((x): x is string => typeof x === "string") : [];
+  return typeof cmd === "string" ? [cmd, ...args] : [];
+}
+
+/** Whether an entry is switched off (`enabled: false` or `disabled: true`, depending on the client). */
+export function entryDisabled(entry: unknown): boolean {
+  return isPlainObject(entry) && (entry.enabled === false || entry.disabled === true);
 }
 
 function describeEntry(entry: unknown): string {
@@ -395,8 +409,8 @@ async function applyConfig(change: ConfigChange, plan: Plan): Promise<ApplyResul
   }
 
   if (change.spec.lock) await waitForLock(state.file);
-  // Follow a symlinked config (dotfile managers) so the link itself is preserved.
-  const target = realpathOr(state.file);
+  // Write through a symlinked config (dotfile managers) so the link itself survives.
+  const target = fs.lstatSync(state.file, { throwIfNoEntry: false })?.isSymbolicLink() ? realpathOr(state.file) : state.file;
   let fresh: string | undefined;
   try {
     fresh = await fsp.readFile(target, "utf8");
@@ -436,13 +450,13 @@ export async function applyPlan(plan: Plan, onProgress?: ProgressHook, skillSour
   };
   for (const change of plan.changes) {
     if (change.kind !== "config") continue;
-    onProgress?.(`${change.clients.map((c) => c.label).join(", ")}: ${change.file}`);
+    onProgress?.(`${change.clients.map((c) => c.label).join(", ")}: ${tildify(change.file, plan.ctx)}`);
     await run(change, () => applyConfig(change, plan));
   }
   let skillInstalled = false;
   for (const change of plan.changes) {
     if (change.kind !== "skill") continue;
-    onProgress?.(`Skill: ${change.dir}`);
+    onProgress?.(`Skill: ${tildify(change.dir, plan.ctx)}`);
     await run(change, async () => {
       if (change.action === "keep") return { change, ok: true, outcome: "kept", ...(change.reason ? { detail: change.reason } : {}) };
       if (change.action === "remove") return { change, ok: true, outcome: (await removeSkill(change.dir)) ? "removed" : "absent" };

@@ -1,38 +1,43 @@
 #!/usr/bin/env node
 import { parseArgs, type ParseArgsConfig } from "node:util";
-import { startBrowserLogin } from "./auth/browser-login.js";
-import { startDeviceLogin } from "./auth/device-login.js";
-import type { TokenSet } from "./auth/store.js";
 import type { Background } from "./backend/images-client.js";
 import { loadConfig } from "./config.js";
-import { DEFAULT_REQUEST_TIMEOUT_MS, DEFAULT_SERVER_NAME, PACKAGE_NAME, SKILL_SOURCE_DIR, VERSION } from "./constants.js";
+import { DEFAULT_SERVER_NAME, PACKAGE_NAME, VERSION } from "./constants.js";
 import { runDoctor } from "./doctor.js";
 import { describeError, ImagegenError, toImagegenError } from "./errors.js";
 import { ASPECT_RATIOS, runGeneration, type AspectRatio, type GenerationRequest } from "./generation.js";
 import type { OutputFormat } from "./images/output.js";
-import { installOpencode, uninstallOpencode, type InstallReport } from "./install/opencode.js";
-import { absoluteServerCommand, clientSnippet, CLIENTS, type ClientId } from "./install/snippets.js";
+import { configCommand, installCommand, uninstallCommand, UsageError, type CommandEnv } from "./install/commands.js";
+import { currentContext } from "./install/context.js";
+import { currentRuntime } from "./install/launch.js";
+import { colorEnabled, createTheme } from "./install/theme.js";
+import { clackPrompter } from "./install/wizard.js";
 import { createLogger } from "./log.js";
+import { describeSignIn, performLogin } from "./login.js";
 import { runRemoveBackground } from "./remove-background.js";
 import { createDeps, runStdioServer } from "./server/index.js";
 import { collectStatus, formatStatus } from "./status.js";
 import { formatBytes, formatSeconds } from "./util/format.js";
-import { cliInvocation, detectInvocation, serverCommand } from "./util/invocation.js";
-import { openInBrowser } from "./util/open.js";
+import { cliInvocation, serverCommand } from "./util/invocation.js";
 
 const HELP = `${PACKAGE_NAME} ${VERSION}
-OpenAI Codex's image generation (gpt-image via your ChatGPT plan — no API key) as an MCP
-server + Agent Skill for opencode, Claude Code, Cursor, VS Code and other MCP clients.
+OpenAI Codex's image generation (gpt-image via your ChatGPT plan, no API key) as an MCP server
++ Agent Skill for opencode, Claude Code, Codex, Cursor, VS Code, Gemini CLI and 20 more tools.
 
 Usage: ${PACKAGE_NAME} <command> [options]
 
 Setup
-  install [opencode]        Add the MCP server + skill to opencode (global; --project for ./opencode.json)
-      --project  --name <server>  --no-skill  --dry-run  --force  --timeout <ms>
-      --command "<cmd …>"   custom launch command    --env KEY=VALUE (repeatable)
-  uninstall [opencode]      Remove them again   (--project --name --keep-skill --dry-run)
-  config <client>           Print the config for: ${CLIENTS.join(", ")}
-  doctor                    Diagnose Node, credentials, backend reachability, opencode setup
+  install                   Interactive installer: pick your coding tools, review, apply
+  install <tool…>           Install into the named tools (see --list), no questions asked
+      --all                 every detected tool          --list [--json]  show tools + status
+      --project             this project instead of your user config   (--scope global|project)
+      --launch <auto|node|npx|global>  how tools start the server   --command "<cmd …>"  exact command
+      --no-skill  --skill-only  --name <server>  --timeout <ms>  --env KEY=VALUE (repeatable)
+      --dry-run  --json  --force (replace entries/skills that aren't ours)  -y (= --all)
+  uninstall [tool…]         Remove it again; no names: choose interactively
+      --all  --project  --keep-skill  --name <server>  --dry-run  --json  --force
+  config <tool>             Print the config to add by hand (--project, --launch, --command)
+  doctor                    Diagnose Node, credentials, backend reachability and installed tools
 
 Account
   login                     Sign in with your ChatGPT account in the browser
@@ -100,26 +105,13 @@ function abortOnSigint(): AbortSignal {
 async function cmdLogin(args: string[]): Promise<void> {
   const { values } = parse(args, { device: { type: "boolean" }, "no-browser": { type: "boolean" } });
   const deps = cliDeps();
-  const signal = abortOnSigint();
-  let tokens: TokenSet;
-  const method = values.device ? "device" : "browser";
-  if (values.device) {
-    const login = await startDeviceLogin(deps.auth.oauthClient, signal);
-    out(`To sign in, open this page on any device and enter the code:\n\n    ${login.verificationUrl}\n    Code: ${login.userCode}\n`);
-    out("The code expires in 15 minutes. If ChatGPT says device codes are disabled, enable");
-    out("“device code authorization for Codex” in ChatGPT → Settings → Security, or use browser login.\n");
-    out("Waiting for approval… (Ctrl+C to cancel)");
-    tokens = await login.result;
-  } else {
-    const login = await startBrowserLogin({ ...deps.auth.oauthClient, originator: deps.config.originator, signal });
-    const opened = !values["no-browser"] && !deps.config.noBrowser ? await openInBrowser(login.url) : false;
-    out(opened ? "Opened your browser to sign in with ChatGPT. If it did not open, visit:\n" : "Open this URL in a browser on this machine to sign in with ChatGPT:\n");
-    out(`  ${login.url}\n`);
-    out("Waiting for you to finish signing in… (Ctrl+C to cancel; use --device on a headless machine)");
-    tokens = await login.result;
-  }
-  const { identity, revokedPrevious } = await deps.auth.saveLogin(tokens, method);
-  out(`\n✓ Signed in${identity.email ? ` as ${identity.email}` : ""}${identity.planType ? ` (ChatGPT ${identity.planType} plan)` : ""}.`);
+  const { identity, revokedPrevious } = await performLogin(deps, {
+    method: values.device ? "device" : "browser",
+    openBrowser: !values["no-browser"],
+    signal: abortOnSigint(),
+    print: out,
+  });
+  out(`\n✓ ${describeSignIn(identity)}`);
   if (revokedPrevious) out("  The previous sign-in of this tool was revoked.");
   if (identity.planType === "free") out("  Note: Codex image generation is not available on the ChatGPT Free plan.");
   out(`  Credentials saved to ${deps.config.authFile} (readable only by you).`);
@@ -245,104 +237,43 @@ async function cmdRemoveBg(args: string[]): Promise<void> {
   for (const w of r.warnings) process.stderr.write(`Warning: ${w}\n`);
 }
 
-function printReport(report: InstallReport, dryRun: boolean): void {
-  if (dryRun) out("(dry run — nothing was written)");
-  for (const step of report.steps) out(`✓ ${step.action}: ${step.path}`);
-  for (const w of report.warnings) out(`! ${w}`);
-}
-
-async function cmdInstall(args: string[]): Promise<void> {
-  const { values, positionals } = parse(
-    args,
-    {
-      project: { type: "boolean" },
-      name: { type: "string" },
-      "no-skill": { type: "boolean" },
-      "dry-run": { type: "boolean" },
-      force: { type: "boolean" },
-      timeout: { type: "string" },
-      command: { type: "string" },
-      env: { type: "string", multiple: true },
+function commandEnv(): CommandEnv {
+  const ctx = currentContext();
+  return {
+    ctx,
+    theme: createTheme(colorEnabled(process.stdout)),
+    out,
+    err: (line) => process.stderr.write(`${line}\n`),
+    interactive: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    runtime: () => currentRuntime(ctx),
+    prompter: clackPrompter,
+    credentials: async () => {
+      const status = await collectStatus(cliDeps(), { checkUsage: false });
+      if (!status.active) return { ready: false };
+      return { ready: true, label: `${status.active.label}${status.active.identity?.email ? `, ${status.active.identity.email}` : ""}` };
     },
-    true,
-  );
-  const client = (positionals[0] ?? "opencode") as ClientId;
-  const serverName = values.name ?? DEFAULT_SERVER_NAME;
-  const command = values.command ? values.command.trim().split(/\s+/) : serverCommand();
-  if (client !== "opencode") {
-    if (!CLIENTS.includes(client)) fail(`Unknown client "${client}". Known: ${CLIENTS.join(", ")}.`, 2);
-    out(`Automatic install is implemented for opencode. For ${client}, add this configuration:\n`);
-    printSnippet(client, serverName, command);
-    return;
+    signIn: async (method, print) => {
+      const controller = new AbortController();
+      const onSigint = () => controller.abort(new ImagegenError("login_cancelled", "Sign-in cancelled."));
+      process.once("SIGINT", onSigint);
+      try {
+        const { identity } = await performLogin(cliDeps(), { method, openBrowser: true, signal: controller.signal, print });
+        return describeSignIn(identity);
+      } finally {
+        process.off("SIGINT", onSigint);
+      }
+    },
+    cli: cliInvocation(),
+  };
+}
+
+async function runCommand(fn: (args: string[], env: CommandEnv) => Promise<number>, args: string[]): Promise<void> {
+  try {
+    process.exitCode = await fn(args, commandEnv());
+  } catch (err) {
+    if (err instanceof UsageError) fail(`${err.message}\nRun \`${PACKAGE_NAME} help\` for usage.`, 2);
+    throw err;
   }
-  const environment: Record<string, string> = {};
-  for (const pair of values.env ?? []) {
-    const eq = pair.indexOf("=");
-    if (eq <= 0) fail(`--env expects KEY=VALUE (got "${pair}").`, 2);
-    environment[pair.slice(0, eq)] = pair.slice(eq + 1);
-  }
-  const dryRun = Boolean(values["dry-run"]);
-  const report = await installOpencode({
-    scope: values.project ? "project" : "global",
-    projectDir: process.cwd(),
-    serverName,
-    command,
-    environment,
-    timeoutMs: intOption(values.timeout, "timeout", 10_000, 3_600_000) ?? DEFAULT_REQUEST_TIMEOUT_MS,
-    installSkill: !values["no-skill"],
-    dryRun,
-    force: Boolean(values.force),
-  });
-  printReport(report, dryRun);
-  out(`\nServer command: ${command.join(" ")}`);
-  const deps = cliDeps();
-  const status = await collectStatus(deps, { checkUsage: false });
-  out(
-    status.active
-      ? `Credentials: ready (${status.active.label}${status.active.identity?.email ? `, ${status.active.identity.email}` : ""}).`
-      : `Credentials: not signed in yet — run \`${cliInvocation()} login\` (or ask the agent to call the sign_in tool).`,
-  );
-  out(`\nNext: restart opencode, then check \`opencode mcp list\` shows "${serverName}" as connected.`);
-  out(`Tools appear as ${serverName}_generate_image, ${serverName}_edit_image, ${serverName}_remove_background, ${serverName}_auth_status, ${serverName}_sign_in.`);
-}
-
-async function cmdUninstall(args: string[]): Promise<void> {
-  const { values, positionals } = parse(
-    args,
-    { project: { type: "boolean" }, name: { type: "string" }, "keep-skill": { type: "boolean" }, "dry-run": { type: "boolean" } },
-    true,
-  );
-  const client = positionals[0] ?? "opencode";
-  if (client !== "opencode") fail(`Automatic uninstall is implemented for opencode only; remove the "${values.name ?? DEFAULT_SERVER_NAME}" entry from ${client}'s config manually.`, 2);
-  const dryRun = Boolean(values["dry-run"]);
-  const report = await uninstallOpencode({
-    scope: values.project ? "project" : "global",
-    projectDir: process.cwd(),
-    serverName: values.name ?? DEFAULT_SERVER_NAME,
-    dryRun,
-    keepSkill: Boolean(values["keep-skill"]),
-  });
-  printReport(report, dryRun);
-  out(`Your sign-in was kept; run \`${cliInvocation()} logout\` to remove it too.`);
-}
-
-function printSnippet(client: ClientId, serverName: string, command: string[], custom = false): void {
-  // GUI clients need absolute paths; a custom --command is used exactly as given.
-  const { kind, script } = detectInvocation();
-  const absolute = !custom && kind !== "npx" && script.endsWith(".js") ? absoluteServerCommand(script) : undefined;
-  const s = clientSnippet(client, serverName, command, absolute);
-  out(`# ${s.title}\n# ${s.location}\n`);
-  out(s.body);
-  for (const n of s.notes) out(`\n# ${n}`);
-}
-
-async function cmdConfig(args: string[]): Promise<void> {
-  const { values, positionals } = parse(args, { name: { type: "string" }, command: { type: "string" } }, true);
-  const client = positionals[0] as ClientId | undefined;
-  if (!client || !CLIENTS.includes(client)) fail(`Usage: config <client>. Clients: ${CLIENTS.join(", ")}.`, 2);
-  const custom = Boolean(values.command);
-  printSnippet(client, values.name ?? DEFAULT_SERVER_NAME, custom ? (values.command ?? "").trim().split(/\s+/) : serverCommand(), custom);
-  out(`\n# Skill source: ${SKILL_SOURCE_DIR}`);
 }
 
 async function cmdDoctor(args: string[]): Promise<void> {
@@ -376,11 +307,11 @@ async function main(argv: string[]): Promise<void> {
     case "remove-background":
       return cmdRemoveBg(rest);
     case "install":
-      return cmdInstall(rest);
+      return runCommand(installCommand, rest);
     case "uninstall":
-      return cmdUninstall(rest);
+      return runCommand(uninstallCommand, rest);
     case "config":
-      return cmdConfig(rest);
+      return runCommand(configCommand, rest);
     case "doctor":
       return cmdDoctor(rest);
     case "help":

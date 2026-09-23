@@ -46,7 +46,7 @@ describe("cli", () => {
   test("--version and help", async () => {
     assert.match((await cli(["--version"])).stdout, /^\d+\.\d+\.\d+/);
     const help = await cli(["help"]);
-    assert.match(help.stdout, /install \[opencode\]/);
+    assert.match(help.stdout, /install <tool…>/);
     const bad = await cli(["frobnicate"]);
     assert.equal(bad.code, 2);
   });
@@ -78,14 +78,59 @@ describe("cli", () => {
     assert.equal((await cli(["generate", "x", "-b", "transparent", "-o", "a.jpg"])).code, 1);
   });
 
-  test("install opencode --dry-run and config snippets", async () => {
-    const r = await cli(["install", "opencode", "--dry-run"]);
-    assert.equal(r.code, 0, r.stderr);
-    assert.match(r.stdout, /dry run/);
-    assert.match(r.stdout, /Credentials: ready/);
+  test("install: --list, --dry-run, apply, idempotent re-run, uninstall", async () => {
+    // A PATH without the user's real tools, so no real `claude` (or other CLI) is ever run.
+    const saved = env.PATH;
+    env.PATH = path.dirname(process.execPath);
+    try {
+      const list = await cli(["install", "--list", "--json"]);
+      assert.equal(list.code, 0, list.stderr);
+      const tools = JSON.parse(list.stdout) as { id: string; installed: { global: boolean } }[];
+      assert.ok(tools.some((t) => t.id === "cursor"));
+
+      const dry = await cli(["install", "opencode", "cursor", "--dry-run"]);
+      assert.equal(dry.code, 0, dry.stderr);
+      assert.match(dry.stdout, /Dry run: nothing was written/);
+      assert.match(dry.stdout, /\+ create\s+~[\\/]\.cursor[\\/]mcp\.json/);
+      await assert.rejects(fs.access(path.join(env.HOME!, ".cursor", "mcp.json")));
+
+      const json = JSON.parse((await cli(["install", "cursor", "--dry-run", "--json", "--launch", "npx"])).stdout);
+      assert.equal(json.launch.mode, "npx");
+      assert.equal(json.changes[0].entry.type, "stdio");
+
+      const run = await cli(["install", "opencode", "cursor"]);
+      assert.equal(run.code, 0, run.stderr);
+      assert.match(run.stdout, /ChatGPT sign-in: /);
+      assert.match(run.stdout, /Next steps/);
+      const cursor = JSON.parse(await fs.readFile(path.join(env.HOME!, ".cursor", "mcp.json"), "utf8"));
+      assert.deepEqual(cursor.mcpServers.imagegen.args.slice(-1), ["serve"]);
+      assert.match((await cli(["install", "opencode", "cursor", "--dry-run"])).stdout, /up to date/);
+      assert.ok(JSON.parse((await cli(["install", "--list", "--json"])).stdout).find((t: { id: string }) => t.id === "cursor").installed.global);
+
+      const doctor = await cli(["doctor"]);
+      assert.match(doctor.stdout, /✓ Cursor: /);
+
+      const removed = await cli(["uninstall", "--all"]);
+      assert.equal(removed.code, 0, removed.stderr);
+      assert.match(removed.stdout, /- removed\s+~[\\/]\.cursor[\\/]mcp\.json/);
+      assert.equal(JSON.parse(await fs.readFile(path.join(env.HOME!, ".cursor", "mcp.json"), "utf8")).mcpServers, undefined);
+    } finally {
+      env.PATH = saved;
+    }
+  });
+
+  test("install argument errors and config snippets", async () => {
+    const none = await cli(["install"]);
+    assert.equal(none.code, 2, "no tools and no terminal: usage error instead of a hung prompt");
+    assert.match(none.stderr, /install --list/);
+    assert.equal((await cli(["install", "frobnicator"])).code, 2);
+    assert.equal((await cli(["install", "cursor", "--launch", "teleport"])).code, 2);
+    assert.equal((await cli(["install", "cursor", "--name", "bad name"])).code, 2);
     const c = await cli(["config", "cursor"]);
     assert.match(c.stdout, /"mcpServers"/);
     assert.match(c.stdout, /cli\.js/);
+    assert.match((await cli(["config", "codex"])).stdout, /\[mcp_servers\.imagegen\]/);
+    assert.match((await cli(["config", "vscode", "--project"])).stdout, /"servers"[\s\S]*npx/);
   });
 
   test("logout removes our credentials", async () => {

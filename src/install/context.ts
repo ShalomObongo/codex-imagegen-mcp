@@ -101,11 +101,25 @@ export function realpathOr(p: string): string {
   }
 }
 
-/** `~`-relative form of a path for display. */
-export function tildify(file: string, ctx: Pick<InstallContext, "home" | "platform">): string {
+/**
+ * Short form of a path for display: `~/…` inside home, or `./…` inside the project directory
+ * when that is shorter, otherwise absolute. Symlinked prefixes (macOS /var -> /private/var) are
+ * handled.
+ */
+export function tildify(file: string, ctx: Pick<InstallContext, "home" | "platform"> & { cwd?: string }): string {
   const p = pathApi(ctx);
-  const rel = p.relative(ctx.home, file);
-  if (!rel) return "~";
-  if (rel.startsWith("..") || p.isAbsolute(rel)) return file;
-  return `~${p.sep}${rel}`;
+  const inside = (base: string) => {
+    for (const root of new Set([base, realpathOr(base)])) {
+      for (const f of new Set([file, realpathOr(file)])) {
+        const rel = p.relative(root, f);
+        if (!rel.startsWith("..") && !p.isAbsolute(rel)) return rel;
+      }
+    }
+    return undefined;
+  };
+  const fromHome = inside(ctx.home);
+  const homeForm = fromHome === undefined ? file : fromHome ? `~${p.sep}${fromHome}` : "~";
+  const fromCwd = ctx.cwd ? inside(ctx.cwd) : undefined;
+  const cwdForm = fromCwd === undefined ? undefined : fromCwd ? `.${p.sep}${fromCwd}` : ".";
+  return cwdForm !== undefined && cwdForm.length < homeForm.length ? cwdForm : homeForm;
 }

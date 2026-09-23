@@ -3,14 +3,16 @@ import net from "node:net";
 import path from "node:path";
 import { AuthManager } from "./auth/manager.js";
 import { describeUsage } from "./backend/ratelimits.js";
-import { OAUTH_CALLBACK_PORTS, SKILL_NAME, SKILL_SOURCE_DIR } from "./constants.js";
+import { LEGACY_SKILL_NAMES, OAUTH_CALLBACK_PORTS, SKILL_NAME, SKILL_SOURCE_DIR } from "./constants.js";
 import { toImagegenError } from "./errors.js";
-import { opencodeConfigDir, resolveOpencodeConfigFile } from "./install/opencode.js";
-import { findSkillsNamed, opencodeSkillRoots } from "./install/skill.js";
+import { availableClients, SKILL_ROOTS, skillRootDir, type SkillRootId } from "./install/clients.js";
+import { currentContext, tildify, which, type InstallContext, type Scope } from "./install/context.js";
+import { Detector, NOT_DETECTED } from "./install/detect.js";
+import { formatCommand } from "./install/launch.js";
+import { entryArgv, entryDisabled, isOurEntry, readConfig } from "./install/plan.js";
+import { findSkillsNamed, isOurSkill } from "./install/skills.js";
 import type { ServerDeps } from "./server/context.js";
 import { ensureDir, pathExists } from "./util/fs.js";
-import { isRecord } from "./util/http.js";
-import { parse as parseJsonc } from "jsonc-parser";
 
 export type CheckStatus = "ok" | "warn" | "fail";
 
@@ -28,16 +30,58 @@ function portFree(port: number): Promise<boolean> {
   });
 }
 
-async function onPath(cmd: string): Promise<string | undefined> {
-  if (path.isAbsolute(cmd)) return (await pathExists(cmd)) ? cmd : undefined;
-  const exts = process.platform === "win32" ? (process.env.PATHEXT ?? ".EXE;.CMD;.BAT").split(";") : [""];
-  for (const dir of (process.env.PATH ?? "").split(path.delimiter)) {
-    for (const ext of exts) {
-      const candidate = path.join(dir, cmd + ext);
-      if (await pathExists(candidate)) return candidate;
+async function executableExists(cmd: string, ctx: InstallContext): Promise<boolean> {
+  return path.isAbsolute(cmd) ? pathExists(cmd) : which(ctx, cmd) !== undefined;
+}
+
+/** One check per tool (and scope) that has our server configured, plus the skill copies. */
+async function installationChecks(serverName: string, ctx: InstallContext): Promise<Check[]> {
+  const checks: Check[] = [];
+  const clients = availableClients(ctx);
+  const detections = await new Detector(ctx).detectAll(clients);
+  let configured = 0;
+  for (const scope of ["global", "project"] as Scope[]) {
+    for (const client of clients) {
+      if (client.manual || !client.scopes.includes(scope)) continue;
+      for (const spec of client.configs(ctx, scope, detections.get(client.id) ?? NOT_DETECTED)) {
+        const state = await readConfig(spec, serverName);
+        const name = `${client.label}${scope === "project" ? " (this project)" : ""}${spec.label ? ` · ${spec.label}` : ""}`;
+        if (state.error) {
+          checks.push({ name, status: "warn", detail: state.error });
+          continue;
+        }
+        if (state.current === undefined) continue;
+        if (!isOurEntry(state.current)) {
+          checks.push({ name, status: "warn", detail: `"${serverName}" in ${tildify(state.file, ctx)} runs something else` });
+          continue;
+        }
+        configured++;
+        const argv = entryArgv(state.current);
+        const problems: string[] = [];
+        if (!argv[0] || !(await executableExists(argv[0], ctx))) problems.push(`${argv[0] ?? "command"} not found`);
+        for (const script of argv.filter((a) => a.endsWith("cli.js"))) if (!(await pathExists(script))) problems.push(`${script} is missing`);
+        if (entryDisabled(state.current)) problems.push("disabled");
+        checks.push({
+          name,
+          status: problems.length === 0 ? "ok" : "fail",
+          detail: `${tildify(state.file, ctx)}: ${formatCommand(argv)}${problems.length ? ` (${problems.join("; ")}; run \`install ${client.id}\` again)` : ""}`,
+        });
+      }
     }
   }
-  return undefined;
+  if (configured === 0) checks.push({ name: "MCP clients", status: "warn", detail: "not installed in any tool yet (run `codex-imagegen-mcp install`)" });
+
+  const roots = (scope: Scope) => (Object.keys(SKILL_ROOTS) as SkillRootId[]).map((id) => skillRootDir(id, ctx, scope)).filter((d): d is string => d !== undefined);
+  const all = [...roots("global"), ...roots("project")];
+  const copies = await findSkillsNamed(SKILL_NAME, all);
+  const legacy: string[] = [];
+  for (const root of all) for (const old of LEGACY_SKILL_NAMES) if (await isOurSkill(path.join(root, old))) legacy.push(path.join(root, old));
+  if (copies.length > 0) checks.push({ name: "Agent Skill", status: "ok", detail: copies.map((c) => tildify(c, ctx)).join(", ") });
+  else if (configured > 0) checks.push({ name: "Agent Skill", status: "warn", detail: `no ${SKILL_NAME} skill installed (run \`install\` again without --no-skill)` });
+  if (legacy.length > 0) {
+    checks.push({ name: "Old skill copies", status: "warn", detail: `${legacy.map((l) => tildify(l, ctx)).join(", ")} (from an earlier release; \`install\` replaces them)` });
+  }
+  return checks;
 }
 
 export async function runDoctor(deps: ServerDeps, options: { serverName: string; projectDir: string }): Promise<Check[]> {
@@ -90,43 +134,6 @@ export async function runDoctor(deps: ServerDeps, options: { serverName: string;
     detail: OAUTH_CALLBACK_PORTS.map((p, i) => `${p} ${free[i] ? "free" : "busy"}`).join(", ") + (free.some(Boolean) ? "" : " — browser login will fail; use `login --device`"),
   });
 
-  const configDir = opencodeConfigDir();
-  const { file, exists } = await resolveOpencodeConfigFile(configDir);
-  if (!exists) {
-    checks.push({ name: "opencode config", status: "warn", detail: `${file} not found (run \`install opencode\` if you use opencode)` });
-  } else {
-    let entry: unknown;
-    try {
-      const cfg: unknown = parseJsonc(await fs.readFile(file, "utf8"), [], { allowTrailingComma: true });
-      entry = isRecord(cfg) && isRecord(cfg.mcp) ? cfg.mcp[options.serverName] : undefined;
-    } catch {
-      entry = undefined;
-    }
-    if (!isRecord(entry)) {
-      checks.push({ name: "opencode MCP entry", status: "warn", detail: `no "${options.serverName}" server in ${file} (run \`install opencode\`)` });
-    } else {
-      const command = Array.isArray(entry.command) ? entry.command.map(String) : [];
-      const exe = command[0] ? await onPath(command[0]) : undefined;
-      const script = command.find((c) => c.endsWith("cli.js"));
-      const scriptOk = script ? await pathExists(script) : true;
-      const enabled = entry.enabled !== false;
-      checks.push({
-        name: "opencode MCP entry",
-        status: exe && scriptOk && enabled ? "ok" : "fail",
-        detail: `${command.join(" ")}${exe ? "" : " — executable not found on PATH"}${scriptOk ? "" : " — script missing"}${enabled ? "" : " — disabled"}`,
-      });
-    }
-    const skills = await findSkillsNamed(SKILL_NAME, opencodeSkillRoots(configDir, options.projectDir));
-    checks.push({
-      name: "opencode skill",
-      status: skills.length === 1 ? "ok" : "warn",
-      detail:
-        skills.length === 0
-          ? `no ${SKILL_NAME} skill found (run \`install opencode\`)`
-          : skills.length === 1
-            ? skills[0]!
-            : `${skills.length} skills named ${SKILL_NAME} (opencode picks one unpredictably): ${skills.join(", ")}`,
-    });
-  }
+  checks.push(...(await installationChecks(options.serverName, { ...currentContext(), cwd: options.projectDir })));
   return checks;
 }

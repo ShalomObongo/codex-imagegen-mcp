@@ -281,7 +281,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
   },
   {
     id: "codex",
-    label: "Codex (CLI, IDE, app)",
+    label: "Codex",
     kind: "cli",
     gui: false,
     scopes: ["global", "project"],
@@ -299,6 +299,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     tool: (s, t) => `mcp__${s}__${t}`,
     restart: "Start a new Codex session; `codex mcp list` should show imagegen.",
     notes: (scope) => [
+      "Covers the Codex CLI, IDE extension and desktop app (they share this config).",
       "Codex signed in with ChatGPT already has built-in image generation; this is mainly for API-key setups.",
       ...(scope === "project" ? ["Codex reads .codex/config.toml only in trusted projects."] : []),
     ],
@@ -669,7 +670,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: stdio,
     skills: () => [],
     manual: { format: "json", root: ["mcpServers"], where: "Settings › Tools › AI Assistant › Model Context Protocol (MCP) › Add › As JSON" },
-    restart: "Paste the JSON below into AI Assistant's MCP settings.",
+    restart: "Paste the JSON into AI Assistant's MCP settings (Settings › Tools › AI Assistant › MCP).",
   },
 ];
 

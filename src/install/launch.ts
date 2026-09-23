@@ -173,7 +173,8 @@ export function adaptLaunch(launch: Launch, opts: { gui: boolean; scope: Scope }
 }
 
 function shellQuote(arg: string): string {
-  return /^[\w@%+=:,./\\-]+$/.test(arg) ? arg : `"${arg.replace(/(["\\$`])/g, "\\$1")}"`;
+  if (/^[\w@%+=:,./\\-]+$/.test(arg)) return arg;
+  return arg.includes("'") ? `"${arg.replace(/(["\\$`])/g, "\\$1")}"` : `'${arg}'`;
 }
 
 /** A readable one-line form of a command. */
