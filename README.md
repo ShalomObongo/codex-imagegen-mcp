@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ShalomObongo/codex-imagegen-mcp/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/ShalomObongo/codex-imagegen-mcp?style=flat-square&label=release&color=A6553B"></a>
+  <a href="https://www.npmjs.com/package/codex-imagegen-mcp"><img alt="npm version" src="https://img.shields.io/npm/v/codex-imagegen-mcp?style=flat-square&label=npm&color=A6553B"></a>
   <a href="https://github.com/ShalomObongo/codex-imagegen-mcp/actions/workflows/ci.yml"><img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/ShalomObongo/codex-imagegen-mcp/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <img alt="MCP stdio server" src="https://img.shields.io/badge/MCP-stdio%20server-2A2523?style=flat-square">
   <img alt="Node 22 or newer" src="https://img.shields.io/badge/node-%E2%89%A5%2022-4E6E63?style=flat-square">
@@ -103,15 +103,23 @@ Two real opencode sessions in a scratch project. The images are exactly what cam
 > [!NOTE]
 > You need **Node.js 22+** and a **ChatGPT plan that includes Codex** (Plus, Pro, Business, Enterprise, Edu…). Codex image generation isn't available on the Free plan.
 
-**1 · Install.** This takes the packaged build from the latest GitHub release and puts `codex-imagegen-mcp` on your PATH.
+**1 · Install** from npm. This puts `codex-imagegen-mcp` on your PATH.
+
+```bash
+npm install --global codex-imagegen-mcp
+```
+
+<details>
+<summary>Other ways to install: the GitHub release, or from source</summary>
+<br>
+
+The same package, attached to every [GitHub release](https://github.com/ShalomObongo/codex-imagegen-mcp/releases) with a signed build-provenance attestation:
 
 ```bash
 npm install --global https://github.com/ShalomObongo/codex-imagegen-mcp/releases/latest/download/codex-imagegen-mcp.tgz
 ```
 
-<details>
-<summary>Or build it from source</summary>
-<br>
+From source:
 
 ```bash
 git clone https://github.com/ShalomObongo/codex-imagegen-mcp.git && cd codex-imagegen-mcp
