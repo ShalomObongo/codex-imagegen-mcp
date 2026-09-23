@@ -37,4 +37,9 @@ First release.
 
 ### Verified
 - Live: generations (including 16:9 and 9:16), transparent generations and edits, usage endpoint, 4 concurrent requests.
+- Live sign-in:
+  - A real browser sign-in: auth.openai.com accepts `originator=codex-imagegen-mcp` with the minimal scopes.
+  - A forced real refresh: the refresh token rotated and was persisted, giving a new 10-day access token.
+  - A generation using only this tool's own token.
+  - A real device-code request (`XXXX-XXXXX` code, 5 s interval).
 - opencode 1.18.32: `opencode mcp list` shows the server connected, and the skill loads. Ran end to end with `openai/gpt-5.5` (skill → generate, transparent) and `github-copilot/claude-sonnet-5` (auth_status → 16:9 generate + transparent edit).
