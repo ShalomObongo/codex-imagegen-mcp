@@ -1,0 +1,166 @@
+name: Prepare release
+
+# Cuts a release from main in one click (or `gh workflow run prepare-release.yml -f bump=patch`):
+#
+# 1. Bump the version from package.json and promote CHANGELOG.md's [Unreleased] notes into a
+#    dated section; pre-releases keep them under [Unreleased].
+# 2. Wait until CI has passed on the commit being released.
+# 3. Push "chore: release X.Y.Z" and the vX.Y.Z tag to main in one atomic push (it fails, changing
+#    nothing, if main moved meanwhile).
+# 4. Start the Release pipeline on the tag. Tags pushed with GITHUB_TOKEN don't trigger
+#    workflows, so it's started explicitly. That run is triggered on the tag, so its provenance
+#    points at the release commit.
+#
+# With dry-run it stops after showing the release commit and notes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: What kind of release (ignored when a version is given)
+        type: choice
+        options: [patch, minor, major, prepatch, preminor, premajor, prerelease]
+        default: patch
+      version:
+        description: Exact version instead, e.g. 1.0.0 (optional)
+        type: string
+        required: false
+      dry-run:
+        description: Only show the release commit and notes; push nothing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: ${{ inputs.dry-run && 'Dry run' || 'Prepare' }} ${{ inputs.version || inputs.bump }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # push the release commit and tag
+      actions: write # start the Release workflow on the new tag
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run Prepare release from main (this run is on ${GITHUB_REF})."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # all tags, to check the new one is free
+          # The token stays in the git config: this job pushes the release commit and tag.
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run build
+
+      - id: prepare
+        name: Bump the version and promote the changelog
+        env:
+          BUMP: ${{ inputs.bump }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          args=(prepare --bump "$BUMP" --notes "$RUNNER_TEMP/release-notes.md")
+          if [ -n "$VERSION" ]; then args+=(--version "$VERSION"); fi
+          node dist/scripts/release.js "${args[@]}"
+
+      - name: Check the tag is new
+        env:
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null || git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::${TAG} already exists. To retry its release, run the Release workflow on that tag."
+            exit 1
+          fi
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.prepare.outputs.version }}
+          PREVIOUS: ${{ steps.prepare.outputs.previous }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          {
+            if [ "$DRY_RUN" = "true" ]; then echo "## Dry run: ${PREVIOUS} → ${VERSION}"; else echo "## ${PREVIOUS} → ${VERSION}"; fi
+            echo
+            echo "### Release commit"
+            echo
+            echo '```diff'
+            git diff -- package.json package-lock.json CHANGELOG.md
+            echo '```'
+            echo
+            echo "### Release notes"
+            echo
+            cat "$RUNNER_TEMP/release-notes.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Wait for CI to pass on ${{ github.sha }}
+        if: ${{ !inputs.dry-run }}
+        run: |
+          deadline=$((SECONDS + 45 * 60))
+          while :; do
+            runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --limit 20 --json status,conclusion,url,createdAt)"
+            if [ "$(jq length <<<"$runs")" -eq 0 ]; then
+              echo "::error::CI hasn't run on ${GITHUB_SHA}. Run the CI workflow on main, then try again."
+              exit 1
+            fi
+            latest="$(jq -c 'sort_by(.createdAt) | last' <<<"$runs")"
+            status="$(jq -r .status <<<"$latest")"
+            conclusion="$(jq -r .conclusion <<<"$latest")"
+            url="$(jq -r .url <<<"$latest")"
+            if [ "$status" = "completed" ]; then
+              if [ "$conclusion" = "success" ]; then
+                echo "CI passed on ${GITHUB_SHA}: ${url}"
+                break
+              fi
+              echo "::error::CI ${conclusion} on ${GITHUB_SHA} (${url}). Fix main, then try again."
+              exit 1
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::CI is still ${status} on ${GITHUB_SHA} after 45 minutes (${url})."
+              exit 1
+            fi
+            echo "CI is ${status} on ${GITHUB_SHA}; checking again in 30 s (${url})"
+            sleep 30
+          done
+
+      - name: Commit, tag and push to main
+        if: ${{ !inputs.dry-run }}
+        env:
+          VERSION: ${{ steps.prepare.outputs.version }}
+          TAG: ${{ steps.prepare.outputs.tag }}
+          SUMMARY: ${{ steps.prepare.outputs.summary }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore: release ${VERSION}"
+          git tag -a "$TAG" -m "codex-imagegen-mcp ${VERSION}${SUMMARY:+: ${SUMMARY}}"
+          # main and the tag move together, and only as a fast-forward of the commit CI passed on.
+          git push --atomic origin "HEAD:refs/heads/main" "refs/tags/${TAG}"
+          echo "Pushed $(git rev-parse --short HEAD) to main and tagged it ${TAG}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Start the release pipeline on ${{ steps.prepare.outputs.tag }}
+        if: ${{ !inputs.dry-run }}
+        env:
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"
+          url=""
+          for _ in $(seq 1 20); do
+            url="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow release.yml --branch "$TAG" --event workflow_dispatch --limit 1 --json url --jq '.[0].url // empty')"
+            [ -n "$url" ] && break
+            sleep 3
+          done
+          echo "Release pipeline: ${url:-see the Actions tab}"
+          { echo; echo "### Release pipeline"; echo; echo "Started on \`${TAG}\`: ${url:-see the Actions tab}"; } >> "$GITHUB_STEP_SUMMARY"

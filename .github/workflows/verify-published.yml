@@ -1,0 +1,131 @@
+name: Verify published package
+
+# Checks a version on npm the way users get it. On Linux, macOS and Windows it runs
+# npx -y codex-imagegen-mcp@<version>, installs into 18 tools, starts the server through each
+# config and uninstalls. It also checks that npm's provenance names this repository's release
+# workflow and the tag's commit, that npm and the GitHub release serve byte-identical tarballs,
+# and that registry signatures verify.
+#
+# Called by the release pipeline after publishing. It also runs weekly on the latest release,
+# because a fresh install resolves dependency ranges to newer versions over time.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      dist-tag:
+        type: string
+        default: latest
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to verify, or "latest" or "next"'
+        type: string
+        default: latest
+  schedule:
+    - cron: "17 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve the version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      dist-tag: ${{ steps.resolve.outputs.dist-tag }}
+    steps:
+      - id: resolve
+        env:
+          REQUESTED: ${{ inputs.version || 'latest' }}
+          DIST_TAG: ${{ inputs.dist-tag }}
+        run: |
+          case "$REQUESTED" in
+            latest | next)
+              tag="$REQUESTED"
+              version="$(npm view "codex-imagegen-mcp@${REQUESTED}" version)"
+              ;;
+            *)
+              tag="$DIST_TAG"
+              version="${REQUESTED#v}"
+              ;;
+          esac
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "dist-tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "## Verifying codex-imagegen-mcp@${version}${tag:+ (${tag})}" >> "$GITHUB_STEP_SUMMARY"
+
+  npx:
+    name: npx · ${{ matrix.os }}
+    needs: resolve
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      VERSION: ${{ needs.resolve.outputs.version }}
+      DIST_TAG: ${{ needs.resolve.outputs.dist-tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Wait until npm serves the version to npm install and npx
+        shell: bash
+        run: node dist/scripts/verify-published.js --version "$VERSION" ${DIST_TAG:+--dist-tag "$DIST_TAG"} --wait 20
+      - name: npx -y codex-imagegen-mcp, install into 18 tools, start the server through each config, uninstall
+        shell: bash
+        run: node dist/scripts/smoke.js --registry "$VERSION"
+
+  provenance:
+    name: Provenance and signatures
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      attestations: read
+    env:
+      VERSION: ${{ needs.resolve.outputs.version }}
+      DIST_TAG: ${{ needs.resolve.outputs.dist-tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: npm provenance names release.yml, the tag and its commit; npm and GitHub serve the same tarball
+        run: node dist/scripts/verify-published.js --version "$VERSION" ${DIST_TAG:+--dist-tag "$DIST_TAG"} --wait 20 --provenance --integrity
+      - name: Registry signatures and attestations (npm audit signatures)
+        run: |
+          dir="$(mktemp -d)"
+          cd "$dir"
+          npm init -y >/dev/null
+          npm install "codex-imagegen-mcp@${VERSION}" --no-audit --no-fund
+          npm audit signatures
+          npm audit signatures --json --include-attestations > audit.json
+          jq -e --arg v "$VERSION" '.invalid == [] and .missing == [] and ([.verified[] | select(.name == "codex-imagegen-mcp" and .version == $v and (.attestationBundles | length) > 0)] | length) == 1' audit.json >/dev/null
+          echo "- ✅ \`npm audit signatures\`: registry signatures verify, and codex-imagegen-mcp@${VERSION} has verified attestations" >> "$GITHUB_STEP_SUMMARY"
+      - name: GitHub attestation of the release tarball
+        run: |
+          dir="$(mktemp -d)"
+          gh release download "v${VERSION}" --repo "$GITHUB_REPOSITORY" --pattern "codex-imagegen-mcp-${VERSION}.tgz" --dir "$dir"
+          gh attestation verify "$dir/codex-imagegen-mcp-${VERSION}.tgz" --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "${GITHUB_REPOSITORY}/.github/workflows/release.yml" \
+            --source-ref "refs/tags/v${VERSION}" --deny-self-hosted-runners --format json > attestation.json
+          echo "- ✅ The GitHub release tarball's build attestation verifies: signed by \`release.yml\` on \`v${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"

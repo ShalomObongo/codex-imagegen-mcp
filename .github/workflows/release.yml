@@ -1,22 +1,90 @@
 name: Release
 
+# The delivery pipeline for one version. Every stage must pass before the next, and nothing is
+# published until the tag's commit has passed the full test matrix and its tarball has been
+# installed and started on Linux, macOS and Windows:
+#
+#   plan ─┬─ test (full CI matrix) ──────────┬─ GitHub release ─ npm ─ verify (npx on 3 OSes,
+#         └─ build + attest ─ smoke (3 OSes) ─┘   provenance, signatures, identical tarballs)
+#
+# "Prepare release" starts it on the tag it creates. Pushing a vX.Y.Z tag by hand also works, and
+# running this workflow on an existing tag retries a release: every stage is idempotent.
+
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  release:
-    name: Publish ${{ github.ref_name }}
+  plan:
+    name: Plan ${{ github.ref_name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      npm-tag: ${{ steps.plan.outputs.npm-tag }}
+    steps:
+      - name: Require a release tag
+        if: github.ref_type != 'tag'
+        run: |
+          echo "::error::Releases run on a vX.Y.Z tag, not ${GITHUB_REF}. To cut a release, run the Prepare release workflow."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the tag to be on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::${GITHUB_REF_NAME} (${GITHUB_SHA}) is not on main. Releases are cut from main."
+            exit 1
+          fi
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false # release builds never restore caches
+      - run: npm ci
+      - run: npm run build
+      - id: plan
+        name: Check the tag against package.json and CHANGELOG.md, write the release notes
+        run: node dist/scripts/release.js plan --tag "$GITHUB_REF_NAME" --notes release-notes.md
+      - name: Summary
+        run: |
+          { echo "## Releasing ${GITHUB_REF_NAME} (${GITHUB_SHA:0:7})"; echo; cat release-notes.md; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  test:
+    name: Test
+    needs: plan
+    uses: ./.github/workflows/ci.yml
+    with:
+      skip-package: true # the smoke stage tests the exact tarball being released instead
     permissions:
-      contents: write # create the GitHub release
-      discussions: write # open the release announcement
+      contents: read
+
+  build:
+    name: Build and attest
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
       id-token: write # sign the build provenance attestation
-      attestations: write # store the attestation
+      attestations: write # store it
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -24,104 +92,136 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-          cache: npm
+          package-manager-cache: false
       - run: npm ci
-      - run: npm test
-
-      - name: Check the tag matches package.json
-        run: |
-          version="$(node -p "require('./package.json').version")"
-          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
-            exit 1
-          fi
-          echo "VERSION=${version}" >> "$GITHUB_ENV"
-
       - name: Pack
         run: |
           npm pack
           cp "codex-imagegen-mcp-${VERSION}.tgz" codex-imagegen-mcp.tgz
           sha256sum "codex-imagegen-mcp-${VERSION}.tgz" codex-imagegen-mcp.tgz > SHA256SUMS
           cat SHA256SUMS
-
-      - name: Write release notes from CHANGELOG.md
-        run: |
-          awk -v ver="${VERSION}" '
-            index($0, "## [" ver "]") == 1 { found = 1; next }
-            found && /^## \[/ { exit }
-            found && /^\[[^]]+\]: / { next }
-            found { print }
-          ' CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then
-            echo "::error::CHANGELOG.md has no entry for ${VERSION}"
-            exit 1
-          fi
-          cat >> notes.md <<EOF
-
-          ---
-
-          ### Install
-
-          \`\`\`bash
-          npm install --global https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/codex-imagegen-mcp-${VERSION}.tgz
-          \`\`\`
-
-          Then follow the [quick start](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/README.md#quick-start). \`codex-imagegen-mcp.tgz\` is the same package under a stable name, for \`releases/latest/download/\` links.
-
-          ### Verify
-
-          The tarballs carry a signed build-provenance attestation, and \`SHA256SUMS\` lists their checksums:
-
-          \`\`\`bash
-          gh attestation verify codex-imagegen-mcp-${VERSION}.tgz --repo ${GITHUB_REPOSITORY}
-          \`\`\`
-          EOF
-
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
             codex-imagegen-mcp-${{ env.VERSION }}.tgz
             codex-imagegen-mcp.tgz
-
-      - name: Keep the package for the npm job
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package
-          path: codex-imagegen-mcp-${{ env.VERSION }}.tgz
+          path: |
+            codex-imagegen-mcp-${{ env.VERSION }}.tgz
+            codex-imagegen-mcp.tgz
+            SHA256SUMS
           if-no-files-found: error
 
-      - name: Publish the GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
+  smoke:
+    name: Smoke · ${{ matrix.os }} · Node ${{ matrix.node }}
+    needs: [plan, build]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [24]
+        include:
+          - os: ubuntu-latest
+            node: 22 # the oldest supported Node
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: package
+          path: release
+      - name: Install the release tarball globally, install into 18 tools, start the server through each config, uninstall
+        shell: bash
+        run: node dist/scripts/smoke.js --tarball "release/codex-imagegen-mcp-${VERSION}.tgz"
+
+  github-release:
+    name: GitHub release
+    needs: [plan, test, smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-releases
+      url: ${{ steps.release.outputs.url }}
+    permissions:
+      contents: write # create the release
+      discussions: write # open the announcement
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: package
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-notes
+      - run: sha256sum -c SHA256SUMS
+      - id: release
+        name: Publish the GitHub release
         run: |
-          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            echo "The ${GITHUB_REF_NAME} release already exists; leaving it unchanged."
-            exit 0
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+          if draft="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            if [ "$draft" = "true" ]; then
+              echo "Removing an unfinished draft of ${GITHUB_REF_NAME} left by an earlier attempt."
+              gh release delete "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --yes
+            else
+              # Published releases are immutable: only carry on if it holds this exact tarball.
+              gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern "codex-imagegen-mcp-${VERSION}.tgz" --dir published
+              if ! cmp -s "published/codex-imagegen-mcp-${VERSION}.tgz" "codex-imagegen-mcp-${VERSION}.tgz"; then
+                echo "::error::${GITHUB_REF_NAME} is already published with a different tarball. Releases are immutable; cut a new version."
+                exit 1
+              fi
+              echo "${GITHUB_REF_NAME} is already published with this tarball; nothing to do."
+              exit 0
+            fi
           fi
-          gh release create "${GITHUB_REF_NAME}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${GITHUB_REF_NAME}" \
-            --notes-file notes.md \
-            --verify-tag \
-            --discussion-category "Announcements" \
-            "codex-imagegen-mcp-${VERSION}.tgz" codex-imagegen-mcp.tgz SHA256SUMS
+          args=(--repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag)
+          if [ "$PRERELEASE" = "true" ]; then
+            args+=(--prerelease --latest=false)
+          else
+            args+=(--latest --discussion-category "Announcements")
+          fi
+          gh release create "$GITHUB_REF_NAME" "${args[@]}" "codex-imagegen-mcp-${VERSION}.tgz" codex-imagegen-mcp.tgz SHA256SUMS
+          echo "Published ${url}" >> "$GITHUB_STEP_SUMMARY"
 
   npm:
     # Publishes the exact tarball attached to the GitHub release, through npm trusted publishing
-    # (OIDC): no long-lived token, and npm adds a provenance statement automatically. Re-runnable:
-    # an already-published version is skipped.
-    name: Publish to npm
-    needs: release
+    # (OIDC): no long-lived token, and npm adds a provenance statement automatically. npm's
+    # trusted publisher is tied to this workflow's file name, release.yml.
+    name: npm
+    needs: [plan, github-release]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/codex-imagegen-mcp/v/${{ needs.plan.outputs.version }}
     permissions:
       contents: read
       id-token: write # OIDC for npm trusted publishing
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      NPM_TAG: ${{ needs.plan.outputs.npm-tag }}
     steps:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+          package-manager-cache: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: package
@@ -132,9 +232,20 @@ jobs:
           npm --version
       - name: Publish
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          if npm view "codex-imagegen-mcp@${version}" version >/dev/null 2>&1; then
-            echo "codex-imagegen-mcp@${version} is already on npm; nothing to do."
+          if npm view "codex-imagegen-mcp@${VERSION}" version >/dev/null 2>&1; then
+            echo "codex-imagegen-mcp@${VERSION} is already on npm; nothing to do."
             exit 0
           fi
-          npm publish "./codex-imagegen-mcp-${version}.tgz" --access public
+          npm publish "./codex-imagegen-mcp-${VERSION}.tgz" --access public --tag "$NPM_TAG"
+          echo "Published codex-imagegen-mcp@${VERSION} to npm as ${NPM_TAG}" >> "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    name: Verify
+    needs: [plan, npm]
+    uses: ./.github/workflows/verify-published.yml
+    with:
+      version: ${{ needs.plan.outputs.version }}
+      dist-tag: ${{ needs.plan.outputs.npm-tag }}
+    permissions:
+      contents: read
+      attestations: read
