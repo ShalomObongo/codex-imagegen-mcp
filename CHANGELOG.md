@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- Documentation:
+  - The README's troubleshooting covers `npm error ETARGET` right after a release.
+  - A new FAQ entry, and a Release integrity section in SECURITY, explain how releases are built and how to verify one yourself.
+  - DEVELOPMENT lists the repository settings the release pipeline relies on, and warns against running `npx` inside the checkout.
+- The npm description and keywords mention the installer and more of the supported tools.
+
 ## [0.2.1] - 2026-09-23
 
 Continuous delivery: releases are one click, and verified before and after publishing.

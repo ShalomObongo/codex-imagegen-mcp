@@ -117,6 +117,9 @@ opencode run -m github-copilot/claude-sonnet-5 "…"  # Copilot providers take a
 
 `tmp/` is git-ignored. To see what the server did inside a client, set `CODEX_IMAGEGEN_LOG_LEVEL=debug` and read `~/.local/share/codex-imagegen-mcp/server.log`.
 
+> [!WARNING]
+> Don't run `npx -y codex-imagegen-mcp …` from inside this checkout. npx resolves the package name to the checkout itself and fails with `codex-imagegen-mcp: command not found`. The same goes for a client whose config launches the server through npx, when you open a session in this folder. Use `node dist/src/cli.js` here. On your own machine, `npm install --global codex-imagegen-mcp` gives your tools an absolute launch path that works from any folder.
+
 ## Conventions
 
 - **stdout is the protocol.** Never write to it from server code paths.
@@ -231,6 +234,21 @@ Pushing a `vX.Y.Z` tag by hand, with the version and changelog already committed
 ### Every week
 
 The Verify workflow also runs every Monday against `latest`, because a fresh install resolves dependency ranges to newer versions over time. That catches a dependency update that breaks installs of an already-published release. Run it on demand with `gh workflow run verify-published.yml -f version=X.Y.Z`.
+
+GitHub emails a failed scheduled run to whoever last edited the workflow's `cron` line. GitHub also disables scheduled workflows in public repositories after 60 days without activity; re-enable it on the workflow's Actions page.
+
+### Repository setup the pipeline relies on
+
+These live outside the code. Keep them in place, or release runs fail:
+
+| Setting | Where | Why |
+|---|---|---|
+| npm trusted publisher: this repository, workflow `release.yml` | npmjs.com › the package › Settings › Trusted publishing | Lets the `npm` job publish without a token. Renaming `release.yml` breaks publishing until the trusted publisher is updated. |
+| Environments `github-releases` and `npm`, each deployable only from `v*` tags | Repository settings › Environments | The publishing jobs deploy to them, so nothing on a branch can publish. Add a required reviewer to pause each release for approval. |
+| The *Protect main* ruleset: no deletion, no force pushes | Repository settings › Rules | Prepare release fast-forwards `main` with `GITHUB_TOKEN`. A rule that requires pull requests would block that, unless GitHub Actions is allowed to bypass it. |
+| Immutable releases | Repository settings › General › Releases | A published release's tag and assets can't change afterwards, which the release stage relies on. |
+| Discussions, with an *Announcements* category | Repository settings › Features | Each stable release opens an announcement there. |
+| Default workflow permissions: read | Repository settings › Actions › General | Every job declares the few permissions it needs. |
 
 ### What a release contains
 

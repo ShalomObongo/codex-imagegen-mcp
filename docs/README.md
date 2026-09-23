@@ -38,7 +38,7 @@ codex-imagegen-mcp puts the image generation of OpenAI Codex into any MCP client
     <td width="33%" valign="top">
       <a href="DEVELOPMENT.md"><img src="assets/thumbs/banner-development.jpg" alt="Development"></a><br>
       <b>6 · <a href="DEVELOPMENT.md">Development</a></b><br>
-      <sub>Build, the mock-backed test suite, live testing, artwork, releases.</sub>
+      <sub>Build, the mock-backed test suite, live testing, artwork, the release pipeline.</sub>
     </td>
   </tr>
 </table>
@@ -52,6 +52,7 @@ codex-imagegen-mcp puts the image generation of OpenAI Codex into any MCP client
 | Set it up in your coding tools, or add a new one | [Clients](CLIENTS.md), then [INSTALLER.md](INSTALLER.md) for the design |
 | Understand what Codex does under the hood | [Backend](BACKEND.md) |
 | Change the code | [Architecture](ARCHITECTURE.md), then [Development](DEVELOPMENT.md) |
+| Cut a release, or check how one was built | [Development › Releasing](DEVELOPMENT.md#releasing) and [Release integrity](../.github/SECURITY.md#release-integrity) |
 
 ## At a glance
 

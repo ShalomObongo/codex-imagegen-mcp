@@ -40,3 +40,22 @@ Things that are **out of scope** here:
 - vulnerabilities in OpenAI's services: report them through [OpenAI's security program](https://openai.com/security/);
 - vulnerabilities in MCP clients (opencode, Claude Code, Cursor, …): report them to those projects;
 - an agent being instructed by a malicious prompt to generate or save images where you didn't intend. The server enforces its own limits (no overwrites, validated inputs), but it acts on the tool calls your client sends.
+
+## Release integrity
+
+How a release gets from this repository to your machine:
+
+- **Built in CI, from `main`.** Releases come only from the [release workflow](workflows/release.yml), on GitHub-hosted runners, for a `vX.Y.Z` tag of a commit on `main`, with no dependency caches restored.
+- **One artifact, tested before publishing.** The tarball is built once and gets a signed [build-provenance attestation](https://docs.github.com/en/actions/concepts/security/artifact-attestations). That same file is installed and started on Linux, macOS and Windows, then attached to the GitHub release and published to npm.
+- **No publish tokens.** npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC) bound to `release.yml`, and npm adds SLSA provenance. The publishing jobs run in environments that accept only `v*` tags, and published releases are immutable.
+- **Checked after publishing.** The pipeline confirms that npm's provenance names the release workflow, the tag and its commit, and that npm and GitHub serve byte-identical tarballs.
+
+To check a release yourself:
+
+```bash
+npm audit signatures        # in a project that depends on codex-imagegen-mcp
+gh attestation verify codex-imagegen-mcp-X.Y.Z.tgz --repo ShalomObongo/codex-imagegen-mcp \
+  --signer-workflow ShalomObongo/codex-imagegen-mcp/.github/workflows/release.yml
+```
+
+A way to publish a release that didn't come from this workflow, or to make a published package differ from its tagged source, is a vulnerability: please report it privately.

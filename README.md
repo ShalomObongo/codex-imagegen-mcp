@@ -280,7 +280,7 @@ Each tool gets its own config format, timeout field and skill folder. `install -
     <td width="33%" valign="top">
       <a href="docs/DEVELOPMENT.md"><img src="docs/assets/thumbs/banner-development.jpg" alt="Development"></a><br>
       <b><a href="docs/DEVELOPMENT.md">Development</a></b><br>
-      Build, the mock-backed test suite, live testing, releases.
+      Build, the mock-backed test suite, live testing, the release pipeline.
     </td>
   </tr>
 </table>
@@ -335,6 +335,21 @@ No. It's an unofficial integration that uses the same public OAuth client and in
 
 </details>
 
+<details>
+<summary><b>Is the npm package really built from this repository?</b></summary>
+<br>
+
+Yes, and you can check. The [release pipeline](docs/DEVELOPMENT.md#releasing) builds each release once, from a tagged commit on `main`, and tests it on Linux, macOS and Windows. It then publishes it through npm's trusted publishing, so no token is involved. The npm package and the GitHub release tarball are the same file, and both carry signed provenance that names the tag and commit:
+
+```bash
+npm audit signatures        # in a project that depends on codex-imagegen-mcp
+gh attestation verify codex-imagegen-mcp-X.Y.Z.tgz --repo ShalomObongo/codex-imagegen-mcp
+```
+
+[Release integrity →](.github/SECURITY.md#release-integrity)
+
+</details>
+
 ## Configuration
 
 <details>
@@ -373,6 +388,7 @@ Start with `codex-imagegen-mcp doctor`. It checks Node, the data directory, cred
 | Tools missing in a client | Run `doctor`, re-run `install <tool>`, then restart the tool (`install --list` shows the ids) |
 | `conflict` in the installer | Another server already uses the name `imagegen`: pass `--name`, or `--force` to replace it |
 | An opaque result despite `transparent` | Retry, or generate on a flat `#00FF00` backdrop and run `remove_background` |
+| `npm error ETARGET` · `No matching version found` | The release is minutes old: npm takes a minute or two to serve a new version to installs. Wait and retry; `npx --prefer-online -y codex-imagegen-mcp install` also skips npm's local metadata cache |
 
 Still stuck? See [getting help](.github/SUPPORT.md).
 
