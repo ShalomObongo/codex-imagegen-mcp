@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-09-23
+
+A documentation redesign, illustrated entirely with the tool itself.
+
+### Added
+- **Artwork generated with codex-imagegen-mcp**, following the bundled `imagegen` skill and a seeded art-direction procedure (a 1930s WPA silkscreen travel poster in palette C07). It comprises a logo, a README hero, seven page banners, six feature badges, a social preview and three showcase sheets: 15 generations plus one local `remove_background`.
+- `scripts/compose-doc-art.py`, which builds the committed assets from raw generations:
+  - snaps the service's 251–254 alpha to 255;
+  - typesets every title locally in a slab serif, so no generated text is used;
+  - slices the badge grid, builds the showcase sheets and writes the social preview.
+- `docs/README.md`, a documentation hub with visual cards.
+- `docs/assets/README.md`: the art-direction record, an inventory, and every prompt verbatim, extracted from `history.jsonl`.
+- Twelve Mermaid diagrams in the brand palette, readable on GitHub light and dark: credential resolution, the browser and device-code sign-in flows, lock-serialized refresh, the module map, the request flow, choosing a tool, the test harness and more.
+
+### Changed
+- README, TOOLS, AUTH, CLIENTS, BACKEND, ARCHITECTURE and DEVELOPMENT rewritten with poster banners, GitHub alerts, feature and doc-card grids, collapsible FAQ, configuration and troubleshooting sections, "on this page" navigation and previous/next footers.
+- BACKEND: new measurements.
+  - `21:9` produces 1916×821 and `1:1` produces 1254×1254.
+  - Style-referenced edits keep the reference's look while following the new prompt.
+  - `background: "opaque"` is a hint: the service returned alpha for a prompt about keying out a backdrop.
+  - The quota cost of generating the documentation's 15 images is recorded.
+- Tool and skill descriptions now say `background: "opaque"` *asks for* a filled background rather than forcing one.
+- CLIENTS: an accurate support matrix. Codex names MCP tools `mcp__<server>__<tool>`, confirmed in the binary.
+- `package.json`: the description no longer mentions an API-key backend, `main` now points at the real server module, and the artwork is excluded from the npm package.
+
 ## [0.1.0] - 2026-09-23
 
 First release.

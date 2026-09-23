@@ -10,7 +10,7 @@ Create a new image from text. Calls `POST /backend-api/codex/images/generations`
 |---|---|---|
 | `prompt` | required | 1-32000 characters. Use the labeled schema from `SKILL.md`. |
 | `aspect_ratio` | `auto` | `1:1`, `4:5`, `5:4`, `4:3`, `3:4`, `3:2`, `2:3`, `16:9`, `9:16`, `21:9`, `9:21`. Appended to the prompt as an explicit line; the service then picks a matching canvas. |
-| `background` | `auto` | `transparent` returns a PNG with real alpha. `opaque` forces a filled background. |
+| `background` | `auto` | `transparent` returns a PNG with real alpha. `opaque` asks for a filled background; it's a hint, so also describe the backdrop in the prompt, and avoid wording like "the backdrop will be removed". |
 | `n` | `1` | 1-4 variants of the same prompt, run as parallel requests. Each one counts against the quota. |
 | `output_path` | library | File (`.png`, `.jpg`, `.jpeg`) or directory. Without it, the image goes to the server's image library, outside the project. |
 | `output_format` | `png` | `jpeg` is converted locally, flattened on white, and cannot be transparent. Inferred from the `output_path` extension. |

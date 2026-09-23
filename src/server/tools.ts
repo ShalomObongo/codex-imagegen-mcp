@@ -18,7 +18,7 @@ const backgroundField = z
   .enum(["auto", "transparent", "opaque"])
   .default("auto")
   .describe(
-    'Background: "transparent" returns a PNG with a real alpha channel (cutouts, sprites, icons, stickers, logos); "opaque" forces a filled background; "auto" (default) lets the service decide.',
+    'Background: "transparent" returns a PNG with a real alpha channel (cutouts, sprites, icons, stickers, logos); "opaque" asks for a filled background (a hint — also describe the backdrop in the prompt); "auto" (default) lets the service decide.',
   );
 
 const aspectRatioField = z
