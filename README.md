@@ -9,10 +9,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/ShalomObongo/codex-imagegen-mcp/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/ShalomObongo/codex-imagegen-mcp?style=flat-square&label=release&color=A6553B"></a>
+  <a href="https://github.com/ShalomObongo/codex-imagegen-mcp/actions/workflows/ci.yml"><img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/ShalomObongo/codex-imagegen-mcp/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <img alt="MCP stdio server" src="https://img.shields.io/badge/MCP-stdio%20server-2A2523?style=flat-square">
-  <img alt="Node 20 or newer" src="https://img.shields.io/badge/node-%E2%89%A5%2020-4E6E63?style=flat-square">
+  <img alt="Node 22 or newer" src="https://img.shields.io/badge/node-%E2%89%A5%2022-4E6E63?style=flat-square">
   <img alt="Runs on your ChatGPT plan" src="https://img.shields.io/badge/ChatGPT%20plan-no%20API%20key-A6553B?style=flat-square">
-  <img alt="Apache-2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-D9A05B?style=flat-square">
+  <a href="LICENSE"><img alt="Apache-2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-D9A05B?style=flat-square"></a>
 </p>
 
 <p align="center">
@@ -99,15 +101,25 @@ Two real opencode sessions in a scratch project. The images are exactly what cam
 ## Quick start
 
 > [!NOTE]
-> You need **Node.js 20+** and a **ChatGPT plan that includes Codex** (Plus, Pro, Business, Enterprise, Edu…). Codex image generation isn't available on the Free plan.
+> You need **Node.js 22+** and a **ChatGPT plan that includes Codex** (Plus, Pro, Business, Enterprise, Edu…). Codex image generation isn't available on the Free plan.
 
-**1 · Install and build**
+**1 · Install.** This takes the packaged build from the latest GitHub release and puts `codex-imagegen-mcp` on your PATH.
 
 ```bash
-git clone <this repo> codex-imagegen-mcp && cd codex-imagegen-mcp
-npm install && npm run build
+npm install --global https://github.com/ShalomObongo/codex-imagegen-mcp/releases/latest/download/codex-imagegen-mcp.tgz
+```
+
+<details>
+<summary>Or build it from source</summary>
+<br>
+
+```bash
+git clone https://github.com/ShalomObongo/codex-imagegen-mcp.git && cd codex-imagegen-mcp
+npm ci && npm run build
 npm link                                  # puts `codex-imagegen-mcp` on your PATH
 ```
+
+</details>
 
 **2 · Add it to opencode.** This registers the MCP server and the skill, keeping your config's comments and formatting.
 
@@ -337,12 +349,23 @@ Start with `codex-imagegen-mcp doctor`. It checks Node, the data directory, cred
 | Tools missing in opencode | Check `opencode mcp list`, re-run `install opencode`, then restart opencode |
 | An opaque result despite `transparent` | Retry, or generate on a flat `#00FF00` backdrop and run `remove_background` |
 
+Still stuck? See [getting help](.github/SUPPORT.md).
+
 </details>
+
+## Contributing
+
+Bug reports, docs fixes, support for more clients and backend measurements are welcome. Start with [CONTRIBUTING.md](.github/CONTRIBUTING.md); security issues go through [SECURITY.md](.github/SECURITY.md), never public issues. Every release is listed in the [changelog](CHANGELOG.md).
 
 ---
 
 <p align="center">
   <img src="docs/assets/logo.png" width="64" alt="The Codex ImageGen MCP emblem: a sun rising behind a peak"><br>
+  <a href="CHANGELOG.md">Changelog</a> &nbsp;·&nbsp;
+  <a href=".github/CONTRIBUTING.md">Contributing</a> &nbsp;·&nbsp;
+  <a href=".github/SECURITY.md">Security</a> &nbsp;·&nbsp;
+  <a href=".github/CODE_OF_CONDUCT.md">Code of Conduct</a> &nbsp;·&nbsp;
+  <a href=".github/SUPPORT.md">Support</a><br>
   <sub>
     Unofficial; not affiliated with or endorsed by OpenAI. Usage counts against your ChatGPT plan and is subject to OpenAI's Terms of Use.<br>
     Generated images carry OpenAI's C2PA provenance metadata. Apache-2.0; the bundled skill is adapted from OpenAI Codex (Apache-2.0), see <a href="NOTICE">NOTICE</a>.

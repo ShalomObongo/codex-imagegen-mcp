@@ -41,6 +41,15 @@ function withAbsoluteNode(command: readonly string[]): string[] {
   return command[0] === "node" ? [stableNodePath(), ...command.slice(1)] : [...command];
 }
 
+/**
+ * The launch command for GUI apps, which may start without the shell PATH: an absolute node plus
+ * the absolute CLI script. (A global install's `codex-imagegen-mcp` launcher is `#!/usr/bin/env
+ * node`, which fails when node isn't on the GUI app's PATH.)
+ */
+export function absoluteServerCommand(script: string): string[] {
+  return [stableNodePath(), script, "serve"];
+}
+
 function shellQuote(arg: string): string {
   return /^[\w@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replace(/'/g, "'\\''")}'`;
 }
@@ -53,9 +62,9 @@ function claudeDesktopConfigPath(): string {
 
 const SKILL_NOTE = (dir: string) => `Skill (optional but recommended): copy ${SKILL_SOURCE_DIR} to ${dir}`;
 
-export function clientSnippet(client: ClientId, serverName: string, command: readonly string[]): Snippet {
+export function clientSnippet(client: ClientId, serverName: string, command: readonly string[], absoluteCommand?: readonly string[]): Snippet {
   const [cmd = "node", ...args] = command;
-  const abs = withAbsoluteNode(command);
+  const abs = absoluteCommand ? [...absoluteCommand] : withAbsoluteNode(command);
   const [absCmd = "node", ...absArgs] = abs;
   const json = (v: unknown) => JSON.stringify(v, null, 2);
   switch (client) {

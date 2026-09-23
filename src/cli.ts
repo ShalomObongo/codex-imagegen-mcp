@@ -11,13 +11,13 @@ import { describeError, ImagegenError, toImagegenError } from "./errors.js";
 import { ASPECT_RATIOS, runGeneration, type AspectRatio, type GenerationRequest } from "./generation.js";
 import type { OutputFormat } from "./images/output.js";
 import { installOpencode, uninstallOpencode, type InstallReport } from "./install/opencode.js";
-import { clientSnippet, CLIENTS, type ClientId } from "./install/snippets.js";
+import { absoluteServerCommand, clientSnippet, CLIENTS, type ClientId } from "./install/snippets.js";
 import { createLogger } from "./log.js";
 import { runRemoveBackground } from "./remove-background.js";
 import { createDeps, runStdioServer } from "./server/index.js";
 import { collectStatus, formatStatus } from "./status.js";
 import { formatBytes, formatSeconds } from "./util/format.js";
-import { cliInvocation, serverCommand } from "./util/invocation.js";
+import { cliInvocation, detectInvocation, serverCommand } from "./util/invocation.js";
 import { openInBrowser } from "./util/open.js";
 
 const HELP = `${PACKAGE_NAME} ${VERSION}
@@ -326,8 +326,11 @@ async function cmdUninstall(args: string[]): Promise<void> {
   out(`Your sign-in was kept; run \`${cliInvocation()} logout\` to remove it too.`);
 }
 
-function printSnippet(client: ClientId, serverName: string, command: string[]): void {
-  const s = clientSnippet(client, serverName, command);
+function printSnippet(client: ClientId, serverName: string, command: string[], custom = false): void {
+  // GUI clients need absolute paths; a custom --command is used exactly as given.
+  const { kind, script } = detectInvocation();
+  const absolute = !custom && kind !== "npx" && script.endsWith(".js") ? absoluteServerCommand(script) : undefined;
+  const s = clientSnippet(client, serverName, command, absolute);
   out(`# ${s.title}\n# ${s.location}\n`);
   out(s.body);
   for (const n of s.notes) out(`\n# ${n}`);
@@ -337,7 +340,8 @@ async function cmdConfig(args: string[]): Promise<void> {
   const { values, positionals } = parse(args, { name: { type: "string" }, command: { type: "string" } }, true);
   const client = positionals[0] as ClientId | undefined;
   if (!client || !CLIENTS.includes(client)) fail(`Usage: config <client>. Clients: ${CLIENTS.join(", ")}.`, 2);
-  printSnippet(client, values.name ?? DEFAULT_SERVER_NAME, values.command ? values.command.trim().split(/\s+/) : serverCommand());
+  const custom = Boolean(values.command);
+  printSnippet(client, values.name ?? DEFAULT_SERVER_NAME, custom ? (values.command ?? "").trim().split(/\s+/) : serverCommand(), custom);
   out(`\n# Skill source: ${SKILL_SOURCE_DIR}`);
 }
 

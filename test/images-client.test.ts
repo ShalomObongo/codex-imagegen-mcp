@@ -85,7 +85,8 @@ describe("images client", () => {
 
   test("usage_limit_reached maps to usage_limit with the reset time and is not retried", async () => {
     const { client } = await setup();
-    const resetsAt = Math.floor(Date.now() / 1000) + 7200;
+    // 2h plus a margin: resets_at is whole seconds, so without it "2h" can render as "1h 59m".
+    const resetsAt = Math.floor(Date.now() / 1000) + 7200 + 30;
     mock.state.imageQueue.push({
       status: 429,
       body: { error: { type: "usage_limit_reached", message: "image limit reached", resets_at: resetsAt, plan_type: "plus" } },

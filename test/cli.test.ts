@@ -28,7 +28,13 @@ async function cli(args: string[], cwd = root): Promise<{ stdout: string; stderr
 before(async () => {
   mock = await startMockOpenAI();
   root = await tempDir();
-  env = { PATH: process.env.PATH, HOME: path.join(root, "userhome"), ...testEnv(root, mock) };
+  const home = path.join(root, "userhome");
+  // Windows needs SystemRoot & co. for networking in child processes; USERPROFILE is its HOME.
+  const windows: NodeJS.ProcessEnv =
+    process.platform === "win32"
+      ? { SystemRoot: process.env.SystemRoot, SYSTEMROOT: process.env.SYSTEMROOT, TEMP: process.env.TEMP, TMP: process.env.TMP, USERPROFILE: home }
+      : {};
+  env = { ...windows, PATH: process.env.PATH, HOME: home, ...testEnv(root, mock) };
   await seedOwnAuth(testConfig(root, mock), mock.issue({ email: "cli@example.com" }));
 });
 
@@ -57,7 +63,7 @@ describe("cli", () => {
   test("generate writes the file and prints its path", async () => {
     const r = await cli(["generate", "a", "tiny", "robot", "-o", "out/robot.png", "-a", "16:9"]);
     assert.equal(r.code, 0, r.stderr);
-    assert.match(r.stdout, /out\/robot\.png/);
+    assert.match(r.stdout, /out[\\/]robot\.png/);
     await fs.access(path.join(root, "out", "robot.png"));
     const req = mock.requestsTo("/backend-api/codex/images/generations").at(-1);
     assert.equal(req?.json.prompt, "a tiny robot\n\nAspect ratio: 16:9, wide landscape (horizontal) canvas.");

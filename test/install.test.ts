@@ -9,9 +9,11 @@ import { clientSnippet, CLIENTS } from "../src/install/snippets.js";
 import { tempDir } from "./helpers/env.js";
 
 // Hermetic: skill duplicate scans look under ~/.claude, ~/.agents and ~/.config/opencode.
+// os.homedir() reads HOME on POSIX and USERPROFILE on Windows.
 before(async () => {
   const home = await tempDir("imagegen-home-");
   process.env.HOME = home;
+  process.env.USERPROFILE = home;
   process.env.XDG_CONFIG_HOME = path.join(home, ".config");
 });
 
@@ -129,5 +131,17 @@ describe("client snippets", () => {
     }
     assert.match(clientSnippet("codex", "imagegen", COMMAND).body, /^\[mcp_servers\.imagegen\]/);
     assert.match(clientSnippet("claude-code", "imagegen", COMMAND).body, /^claude mcp add --scope user imagegen -- node /);
+  });
+
+  test("GUI clients get the absolute launch command for a global install", () => {
+    const global = ["codex-imagegen-mcp", "serve"];
+    const absolute = ["/usr/local/bin/node", "/usr/local/lib/node_modules/codex-imagegen-mcp/dist/src/cli.js", "serve"];
+    const desktop = JSON.parse(clientSnippet("claude-desktop", "imagegen", global, absolute).body);
+    assert.deepEqual(desktop.mcpServers.imagegen, { command: absolute[0], args: absolute.slice(1) });
+    const windsurf = JSON.parse(clientSnippet("windsurf", "imagegen", global, absolute).body);
+    assert.equal(windsurf.mcpServers.imagegen.command, absolute[0]);
+    // Terminal clients keep the short command.
+    const cursor = JSON.parse(clientSnippet("cursor", "imagegen", global, absolute).body);
+    assert.deepEqual(cursor.mcpServers.imagegen, { command: "codex-imagegen-mcp", args: ["serve"] });
   });
 });

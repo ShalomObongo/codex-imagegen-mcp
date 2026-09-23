@@ -6,17 +6,22 @@
 
 Build it, test it without touching OpenAI, test it live, and ship it.
 
-**On this page:** [Setup](#setup) · [Layout](#layout) · [Tests](#tests) · [Live testing](#live-testing) · [Conventions](#conventions) · [Artwork](#artwork) · [Updating from upstream Codex](#updating-from-upstream-codex) · [Release checklist](#release-checklist)
+**On this page:** [Setup](#setup) · [Layout](#layout) · [Tests](#tests) · [Continuous integration](#continuous-integration) · [Live testing](#live-testing) · [Conventions](#conventions) · [Artwork](#artwork) · [Updating from upstream Codex](#updating-from-upstream-codex) · [Releasing](#releasing)
 
 ## Setup
 
+You need Node.js 22 or newer.
+
 ```bash
-npm install
-npm run build        # tsc → dist/, marks dist/src/cli.js executable
-npm test             # build + the node:test suite (Node ≥ 22 for the glob runner)
+git clone https://github.com/ShalomObongo/codex-imagegen-mcp.git && cd codex-imagegen-mcp
+npm ci
+npm run build        # tsc → dist/, marks dist/src/cli.js executable (works on Windows too)
+npm test             # build + the node:test suite
 npm run typecheck
 npm link             # optional: expose `codex-imagegen-mcp` globally for manual testing
 ```
+
+Contribution guidelines, commit style and the pull-request checklist are in [CONTRIBUTING.md](../.github/CONTRIBUTING.md).
 
 ## Layout
 
@@ -71,6 +76,18 @@ flowchart LR
 | `server` | Full MCP over stdio: tools, resources, prompts, progress, errors, sign-in via the tool and then generation |
 | `cli` | Every command end to end against the mock |
 
+## Continuous integration
+
+Every push to `main` and every pull request runs [CI](../.github/workflows/ci.yml):
+
+| Job | What it checks |
+|---|---|
+| **Node 22 · 24 · 26** on Linux | `npm ci`, `npm run typecheck`, `npm test`, a CLI smoke test |
+| **Node 24** on macOS and Windows | The same, on the other two platforms |
+| **Package and install** | `npm pack`, a global install of the tarball, and that the installed CLI runs and ships its skill |
+
+Actions are pinned to commit SHAs, and [Dependabot](../.github/dependabot.yml) keeps them and the npm dependencies current. CodeQL code scanning runs on GitHub's default setup.
+
 ## Live testing
 
 > [!CAUTION]
@@ -119,13 +136,35 @@ Paper grain is seeded, so reruns are byte-stable.
 2. **Diff and port.** Compare that `imagegen/` with `upstream/codex-imagegen-skill/`, update the copy, and port the relevant guidance into `skill/imagegen/`.
 3. **Check the tool.** Look at `codex-rs/ext/image-generation/src/tool.rs` upstream for changes to the request body, model id or limits.
 
-## Release checklist
+## Releasing
 
-1. `npm test` passes and `npm run typecheck` is clean.
-2. Live smoke test: `status`, one `generate`, one `edit` with `-b transparent`, `doctor`.
-3. opencode: `install opencode`, `opencode mcp list`, one `opencode run`.
-4. Bump `version` in `package.json` and add a `CHANGELOG.md` entry.
-5. `npm pack --dry-run` includes `dist/src`, `skill`, `docs/*.md`, `README.md`, `LICENSE` and `NOTICE`. The artwork is excluded to keep the package small.
+Releases are automated. A maintainer only has to:
+
+1. Make sure `main` is green in CI, and run the live smoke test: `status`, one `generate`, one edit with `-b transparent`, `doctor`, plus one `opencode run`.
+2. Bump `version` in `package.json` (then `npm install --package-lock-only`) and add a `## [X.Y.Z] - YYYY-MM-DD` entry to `CHANGELOG.md`, with its compare link at the bottom.
+3. Commit, then tag and push: `git tag -a vX.Y.Z -m "…" && git push origin main vX.Y.Z`.
+
+The [release workflow](../.github/workflows/release.yml) then:
+
+```mermaid
+flowchart LR
+    tag(["push tag vX.Y.Z"]):::ink --> test["npm ci · npm test"]:::teal
+    test --> check{"tag = package.json<br/>version?"}:::cream
+    check -- "no" --> fail(["fail the release"]):::ochre
+    check -- "yes" --> pack["npm pack<br/>+ stable-named copy<br/>+ SHA256SUMS"]:::rust
+    pack --> notes["notes from<br/>CHANGELOG.md"]:::rust
+    notes --> attest["sign build-provenance<br/>attestation"]:::teal
+    attest --> release(["GitHub release<br/>+ announcement discussion"]):::ink
+    classDef ink fill:#2A2523,stroke:#9A8C76,color:#E4D9C6
+    classDef rust fill:#A6553B,stroke:#7E3F2B,color:#FFFFFF
+    classDef ochre fill:#D9A05B,stroke:#B5813F,color:#2A2523
+    classDef teal fill:#4E6E63,stroke:#3A544B,color:#FFFFFF
+    classDef cream fill:#E4D9C6,stroke:#A89A80,color:#2A2523
+```
+
+Each release carries `codex-imagegen-mcp-X.Y.Z.tgz`, the same file as `codex-imagegen-mcp.tgz` (so `releases/latest/download/codex-imagegen-mcp.tgz` always points at the newest build), and `SHA256SUMS`. Anyone can verify a download with `gh attestation verify codex-imagegen-mcp-X.Y.Z.tgz --repo ShalomObongo/codex-imagegen-mcp`.
+
+The package itself contains `dist/src`, `skill`, `docs/*.md`, `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`; the artwork is excluded to keep it small. `npm pack --dry-run` shows the list.
 
 ---
 

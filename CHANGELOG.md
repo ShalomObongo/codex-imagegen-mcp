@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-09-23
+
+The project is public on GitHub, with automated, verifiable releases.
+
+### Added
+- **One-command install** from the latest GitHub release: `npm install --global https://github.com/ShalomObongo/codex-imagegen-mcp/releases/latest/download/codex-imagegen-mcp.tgz`.
+- **Continuous integration.** Tests run on Node 22, 24 and 26 on Linux, plus macOS and Windows, with a job that packs the tarball, installs it globally and runs it.
+- **Release automation.** Pushing a `vX.Y.Z` tag tests the code, checks the tag against `package.json`, and packs versioned and stable-named tarballs with `SHA256SUMS`. It signs a build-provenance attestation (`gh attestation verify`) and publishes the release with notes from this changelog, plus an announcement discussion.
+- **Community files:** contributing guide, security policy (private vulnerability reporting, with the security model spelled out), Contributor Covenant 2.1, support guide, issue forms, a pull-request template and CODEOWNERS.
+- **Dependabot** for npm and GitHub Actions. Actions are pinned to commit SHAs.
+
+### Changed
+- **Node.js 22 or newer is required.** Node 20 reached end of life in April 2026, and 22, 24 and 26 are what CI tests.
+- The build is cross-platform: no `rm -rf` or `chmod`, so it works in Windows `cmd.exe`.
+- `config claude-desktop` and `config windsurf` print an absolute node and script path. A global install's launcher needs `node` on the PATH, which GUI apps often lack.
+- `package.json` has repository, homepage and bugs links, and more keywords.
+- `.gitattributes` normalizes line endings to LF on every platform and marks the vendored upstream skill for language statistics.
+
+### Fixed
+- A usage-limit test could fail at random, because a reset time 2 hours away sometimes rendered as "1h 59m".
+- Tests assumed POSIX path separators and a POSIX environment in child processes.
+
 ## [0.1.1] - 2026-09-23
 
 A documentation redesign, illustrated entirely with the tool itself.
@@ -68,3 +90,7 @@ First release.
   - A generation using only this tool's own token.
   - A real device-code request (`XXXX-XXXXX` code, 5 s interval).
 - opencode 1.18.32: `opencode mcp list` shows the server connected, and the skill loads. Ran end to end with `openai/gpt-5.5` (skill → generate, transparent) and `github-copilot/claude-sonnet-5` (auth_status → 16:9 generate + transparent edit).
+
+[0.1.2]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/ShalomObongo/codex-imagegen-mcp/releases/tag/v0.1.0

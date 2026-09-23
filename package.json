@@ -1,9 +1,17 @@
 {
   "name": "codex-imagegen-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server + Agent Skill that brings OpenAI Codex's image generation to any MCP client (opencode, Claude Code, Cursor, VS Code and more), running on your ChatGPT plan with no API key.",
   "license": "Apache-2.0",
-  "author": "Shalom Obongo",
+  "author": "Shalom Obongo (https://github.com/ShalomObongo)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShalomObongo/codex-imagegen-mcp.git"
+  },
+  "homepage": "https://github.com/ShalomObongo/codex-imagegen-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/ShalomObongo/codex-imagegen-mcp/issues"
+  },
   "type": "module",
   "bin": {
     "codex-imagegen-mcp": "dist/src/cli.js"
@@ -19,10 +27,11 @@
     "NOTICE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.json && chmod +x dist/src/cli.js",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/src/cli.js', 0o755)\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test --test-concurrency=1 \"dist/test/**/*.test.js\"",
     "start": "node dist/src/cli.js serve",
@@ -30,13 +39,18 @@
   },
   "keywords": [
     "mcp",
+    "mcp-server",
     "model-context-protocol",
     "image-generation",
-    "gpt-image-2",
+    "image-editing",
+    "gpt-image",
     "codex",
+    "openai-codex",
     "chatgpt",
     "opencode",
-    "agent-skill"
+    "claude-code",
+    "cursor",
+    "agent-skills"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

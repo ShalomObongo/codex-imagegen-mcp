@@ -43,7 +43,7 @@ async function onPath(cmd: string): Promise<string | undefined> {
 export async function runDoctor(deps: ServerDeps, options: { serverName: string; projectDir: string }): Promise<Check[]> {
   const checks: Check[] = [];
   const major = Number(process.versions.node.split(".")[0]);
-  checks.push({ name: "Node.js", status: major >= 20 ? "ok" : "fail", detail: `v${process.versions.node}${major >= 20 ? "" : " (need >= 20)"}` });
+  checks.push({ name: "Node.js", status: major >= 22 ? "ok" : "fail", detail: `v${process.versions.node}${major >= 22 ? "" : " (need >= 22)"}` });
 
   try {
     await ensureDir(deps.config.home);
