@@ -297,7 +297,7 @@ async function scenario(cli: Cli, sb: Sandbox, o: { launch: string; expectMode: 
   const launches = launchesOf(configs);
   for (const launch of launches) {
     const v = await handshake(launch, sb, o.serverVersion);
-    step(`MCP ✓ ${formatCommand(launch.argv)}${Object.keys(launch.env).length ? ` + env ${Object.keys(launch.env).join(",")}` : ""}${launch.gui ? " (GUI PATH)" : ""} → ${v}, for ${launch.clients.length} tools`);
+    step(`MCP ✓ ${formatCommand(launch.argv)}${Object.keys(launch.env).length ? ` + env ${Object.keys(launch.env).join(",")}` : ""}${launch.gui && !WIN ? " (GUI app PATH)" : ""} → ${v}, for ${launch.clients.length} tools`);
   }
 
   // doctor's exit code reflects sign-in and network checks; here only the installations matter.
