@@ -107,7 +107,7 @@ function toolOptions(clients: readonly ClientDefinition[], detections: ReadonlyM
     const status = installed.has(c.id) ? "installed" : d?.found ? `found ${d.evidence[0] ?? ""}`.trim() : "not detected";
     const extra =
       c.id === "codex"
-        ? "has built-in image generation when signed in with ChatGPT"
+        ? "built-in image gen with ChatGPT sign-in"
         : c.id === "windsurf"
           ? "legacy; current builds are Devin Desktop"
           : c.manual
@@ -137,7 +137,7 @@ export async function installWizard(w: WizardEnv): Promise<number> {
   spin.stop(`Found ${detectedCount} of ${clients.length} supported tools on this machine`);
 
   const picked = await ui.groupMultiselect({
-    message: `Where should imagegen be installed? ${t.dim("(space to toggle, enter to confirm)")}`,
+    message: "Where should imagegen be installed?",
     options: toolOptions(clients, detections, installed),
     initialValues: clients.filter((c) => preselected(c, detections)).map((c) => c.id),
     required: true,
@@ -161,7 +161,7 @@ export async function installWizard(w: WizardEnv): Promise<number> {
 
   let skill = false;
   if (selected.some((c) => c.skillZip || c.skills(w.ctx, scope).length > 0)) {
-    const answer = await ui.confirm({ message: `Also install the ${SKILL_NAME} Agent Skill? ${t.dim("It teaches the agent how to prompt, save and iterate.")}`, initialValue: true });
+    const answer = await ui.confirm({ message: `Install the ${SKILL_NAME} Agent Skill too? ${t.dim("(how to prompt, save and iterate)")}`, initialValue: true });
     if (cancelled(answer)) return abort(ui);
     skill = answer;
   }
@@ -230,7 +230,7 @@ export async function installWizard(w: WizardEnv): Promise<number> {
   await offerSignIn(w);
   const steps = nextSteps(plan, results.length > 0 ? results : undefined, t);
   if (steps.length > 0) ui.note(steps.join("\n"), "Next steps");
-  ui.outro(`Then ask your agent: ${t.italic(`"Generate a 16:9 hero image of a lighthouse at dusk and save it to assets/hero.png"`)}`);
+  ui.outro(`Try it: ask your agent for ${t.italic(`"a 16:9 hero image of a lighthouse at dusk, saved to assets/hero.png"`)}`);
   return results.some((r) => !r.ok) ? 1 : 0;
 }
 

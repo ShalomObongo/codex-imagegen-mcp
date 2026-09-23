@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PACKAGE_NAME, PACKAGE_ROOT, VERSION } from "../constants.js";
 import { ImagegenError } from "../errors.js";
-import { envDir, pathApi, pathDirs, realpathOr, which, type InstallContext, type Scope } from "./context.js";
+import { envDir, pathApi, pathDirs, realpathOr, tildify, which, type InstallContext, type Scope } from "./context.js";
 
 /**
  * How an MCP client starts the server:
@@ -173,7 +173,7 @@ export function adaptLaunch(launch: Launch, opts: { gui: boolean; scope: Scope }
 }
 
 function shellQuote(arg: string): string {
-  if (/^[\w@%+=:,./\\-]+$/.test(arg)) return arg;
+  if (/^[\w@%+=:,./\\~-]+$/.test(arg)) return arg;
   return arg.includes("'") ? `"${arg.replace(/(["\\$`])/g, "\\$1")}"` : `'${arg}'`;
 }
 
@@ -182,6 +182,9 @@ export function formatCommand(argv: readonly string[]): string {
   return argv.map(shellQuote).join(" ");
 }
 
-export function describeLaunch(launch: Launch): string {
-  return formatCommand(launch.argv);
+/** The launch command for display, with paths under home shortened to `~/…` (configs keep absolute paths). */
+export function describeLaunch(launch: Launch, ctx?: InstallContext): string {
+  if (!ctx) return formatCommand(launch.argv);
+  const p = pathApi(ctx);
+  return formatCommand(launch.argv.map((a) => (p.isAbsolute(a) ? tildify(a, ctx) : a)));
 }

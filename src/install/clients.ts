@@ -224,7 +224,7 @@ function vscodeFamily(id: string, label: string, product: string, bin: string, a
         : [json([locations(ctx).project(".vscode", "mcp.json")], ["servers"])],
     entry: (l) => ({ type: "stdio", ...stdio(l) }),
     skills: always("agents", "claude", "copilot", "github"),
-    restart: `In ${label}, run "MCP: List Servers", start imagegen and trust it when asked.`,
+    restart: `Run "MCP: List Servers", start imagegen and trust it.`,
     notes: (scope) => (scope === "global" ? ["Written to the default profile; other VS Code profiles keep their own mcp.json."] : []),
   };
 }
@@ -257,7 +257,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: opencodeEntry,
     skills: always("agents", "claude", "opencode"),
     tool: (s, t) => `${s}_${t}`,
-    restart: "Restart OpenCode, then check that `opencode mcp list` shows imagegen as connected.",
+    restart: "Restart OpenCode; `opencode mcp list` should show imagegen.",
   },
   {
     id: "claude-code",
@@ -276,7 +276,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: (l) => ({ type: "stdio", command: l.command, args: [...l.args], env: { ...l.env } }),
     skills: always("claude"),
     tool: (s, t) => `mcp__${s}__${t}`,
-    restart: "Start a new Claude Code session; `claude mcp list` should show imagegen.",
+    restart: "Start a new session; `claude mcp list` should show imagegen.",
     notes: (scope) => (scope === "project" ? ["Claude Code asks you to approve servers from .mcp.json the first time."] : []),
   },
   {
@@ -297,10 +297,10 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: (l, o) => ({ ...stdio(l), startup_timeout_sec: 60, tool_timeout_sec: seconds(o.timeoutMs) }),
     skills: always("agents"),
     tool: (s, t) => `mcp__${s}__${t}`,
-    restart: "Start a new Codex session; `codex mcp list` should show imagegen.",
+    restart: "Start a new session; `codex mcp list` should show imagegen.",
     notes: (scope) => [
-      "Covers the Codex CLI, IDE extension and desktop app (they share this config).",
-      "Codex signed in with ChatGPT already has built-in image generation; this is mainly for API-key setups.",
+      "Covers the Codex CLI, IDE extension and desktop app (they share this file).",
+      "With a ChatGPT sign-in Codex already generates images; this mainly helps API-key setups.",
       ...(scope === "project" ? ["Codex reads .codex/config.toml only in trusted projects."] : []),
     ],
   },
@@ -339,7 +339,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     tool: (s, t) => `${s}-${t}`,
     restart: "Run /mcp reload in Copilot CLI, or restart it.",
     notes: (scope) =>
-      scope === "project" ? ["Copilot CLI reads .github/mcp.json in trusted folders; a .mcp.json next to it takes precedence."] : [],
+      scope === "project" ? ["Read in trusted folders only; a .mcp.json next to it takes precedence."] : [],
   },
   {
     id: "cursor",
@@ -354,8 +354,8 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     configs: (ctx, scope) => [json([scope === "global" ? locations(ctx).home(".cursor", "mcp.json") : locations(ctx).project(".cursor", "mcp.json")], ["mcpServers"])],
     entry: (l) => ({ type: "stdio", ...stdio(l) }),
     skills: always("agents", "claude", "cursor"),
-    restart: "Restart Cursor, then make sure imagegen is enabled under Settings › MCP.",
-    notes: () => ["Cursor's terminal agent (cursor-agent) stops tool calls after 60 s; image calls usually take 15-60 s."],
+    restart: "Restart Cursor; check imagegen is enabled in Settings › MCP.",
+    notes: () => ["Cursor's CLI (cursor-agent) cuts tool calls off at 60 s; most images take 15-60 s."],
   },
   vscodeFamily("vscode", "VS Code", "Code", "code", {
     mac: "Visual Studio Code.app",
@@ -381,7 +381,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: stdio,
     skills: () => [],
     skillZip: true,
-    restart: "Quit Claude Desktop completely (not just the window) and open it again.",
+    restart: "Quit Claude Desktop fully (not just the window) and reopen it.",
     notes: (_scope, ctx) => (ctx.platform === "linux" ? ["Claude Desktop has no official Linux build; this is the path community builds use."] : []),
   },
   {
@@ -400,7 +400,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: stdio,
     skills: always("agents", "devin"),
     restart: "Restart Devin Desktop.",
-    notes: () => ["Devin also imports MCP servers from other tools' configs; if imagegen appears twice, turn one off."],
+    notes: () => ["Devin also imports other tools' MCP configs; if imagegen shows twice, turn one off."],
   },
   {
     id: "windsurf",
@@ -436,7 +436,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     ],
     entry: (l, o) => ({ ...stdio(l), timeout: seconds(o.timeoutMs) }),
     skills: always("agents"),
-    restart: "Zed applies settings immediately; check the server under Agent › Settings.",
+    restart: "Zed picks it up right away; see Agent › Settings.",
   },
   {
     id: "cline",
@@ -462,7 +462,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     },
     entry: (l, o) => ({ ...stdio(l), disabled: false, timeout: seconds(o.timeoutMs) }),
     skills: always("agents", "cline"),
-    restart: "Start a new Cline task (reload the editor window if imagegen doesn't appear).",
+    restart: "Start a new Cline task (or reload the editor window).",
   },
   {
     id: "zoo",
@@ -508,7 +508,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: opencodeEntry,
     skills: always("agents", "claude", "kilo"),
     tool: (s, t) => `${s}_${t}`,
-    restart: "Reload the editor window (Developer: Reload Window) or restart the Kilo CLI.",
+    restart: "Reload the editor window, or restart the Kilo CLI.",
   },
   {
     id: "amp",
@@ -638,7 +638,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: stdio,
     skills: (_ctx, scope) => (scope === "global" ? ["antigravity"] : ["agents"]),
     restart: "Restart Antigravity (or refresh MCP Store › Manage).",
-    notes: () => ["Antigravity's MCP file is lightly documented; if imagegen is missing, check MCP Store › Manage › View raw config."],
+    notes: () => ["If imagegen is missing, check MCP Store › Manage › View raw config."],
   },
   {
     id: "visual-studio",
@@ -657,7 +657,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     configs: (ctx) => [json([locations(ctx).home(".mcp.json")], ["servers"])],
     entry: (l) => ({ type: "stdio", ...stdio(l) }),
     skills: () => [],
-    restart: "Restart Visual Studio, then enable imagegen in Copilot Chat's tool list.",
+    restart: "Restart Visual Studio; enable imagegen in Copilot Chat's tools.",
   },
   {
     id: "jetbrains-ai",
@@ -670,7 +670,7 @@ export const CLIENT_REGISTRY: readonly ClientDefinition[] = [
     entry: stdio,
     skills: () => [],
     manual: { format: "json", root: ["mcpServers"], where: "Settings › Tools › AI Assistant › Model Context Protocol (MCP) › Add › As JSON" },
-    restart: "Paste the JSON into AI Assistant's MCP settings (Settings › Tools › AI Assistant › MCP).",
+    restart: "Paste the JSON into Settings › Tools › AI Assistant › MCP.",
   },
 ];
 

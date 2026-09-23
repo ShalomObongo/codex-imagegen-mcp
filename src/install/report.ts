@@ -112,7 +112,7 @@ function row(theme: Theme, tone: Tone, verb: string, what: string, extra?: strin
 /** Changes grouped under client (or skill) headings. */
 export function renderPlan(plan: Plan, theme: Theme, options: { showLaunch?: boolean } = {}): string[] {
   const lines: string[] = [];
-  if (options.showLaunch !== false && plan.launch) lines.push(`${theme.dim("Launch")}  ${describeLaunch(plan.launch)}`, "");
+  if (options.showLaunch !== false && plan.launch) lines.push(`${theme.dim("Launch")}  ${describeLaunch(plan.launch, plan.ctx)}`, "");
   const groups = new Map<string, { clients: readonly ClientDefinition[]; changes: Change[] }>();
   for (const change of plan.changes) {
     const g = groups.get(group(change)) ?? { clients: change.kind === "config" || change.kind === "manual" ? change.clients : [], changes: [] };

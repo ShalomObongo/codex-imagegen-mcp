@@ -90,7 +90,7 @@ describe("install wizard", () => {
         const all = Object.values(o.options).flat();
         assert.equal(all.find((x) => x.value === "cursor")!.label, "Cursor");
         assert.match(all.find((x) => x.value === "cursor")!.hint ?? "", /^found /);
-        assert.match(all.find((x) => x.value === "codex")!.hint ?? "", /built-in image generation/);
+        assert.match(all.find((x) => x.value === "codex")!.hint ?? "", /built-in image gen/);
         assert.ok(Object.keys(o.options).includes("Terminal agents"));
         return ["opencode", "cursor"];
       },

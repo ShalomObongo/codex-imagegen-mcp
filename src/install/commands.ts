@@ -107,7 +107,7 @@ function printPlanOrResults(env: CommandEnv, plan: Plan, results: ApplyResult[] 
   env.out(`${t.badge("codex-imagegen-mcp")} ${t.dim(`v${VERSION} · ${title}`)}`);
   env.out();
   if (results) {
-    if (plan.launch) env.out(`${t.dim("Launch")}  ${describeLaunch(plan.launch)}\n`);
+    if (plan.launch) env.out(`${t.dim("Launch")}  ${describeLaunch(plan.launch, plan.ctx)}\n`);
     for (const line of renderResults(results, plan.ctx, t)) env.out(line);
   } else {
     for (const line of renderPlan(plan, t)) env.out(line);
