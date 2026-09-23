@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Publish ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # create the GitHub release
+      discussions: write # open the release announcement
+      id-token: write # sign the build provenance attestation
+      attestations: write # store the attestation
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+      - name: Check the tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            exit 1
+          fi
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
+
+      - name: Pack
+        run: |
+          npm pack
+          cp "codex-imagegen-mcp-${VERSION}.tgz" codex-imagegen-mcp.tgz
+          sha256sum "codex-imagegen-mcp-${VERSION}.tgz" codex-imagegen-mcp.tgz > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Write release notes from CHANGELOG.md
+        run: |
+          awk -v ver="${VERSION}" '
+            index($0, "## [" ver "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[^]]+\]: / { next }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no entry for ${VERSION}"
+            exit 1
+          fi
+          cat >> notes.md <<EOF
+
+          ---
+
+          ### Install
+
+          \`\`\`bash
+          npm install --global https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/codex-imagegen-mcp-${VERSION}.tgz
+          \`\`\`
+
+          Then follow the [quick start](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/README.md#quick-start). \`codex-imagegen-mcp.tgz\` is the same package under a stable name, for \`releases/latest/download/\` links.
+
+          ### Verify
+
+          The tarballs carry a signed build-provenance attestation, and \`SHA256SUMS\` lists their checksums:
+
+          \`\`\`bash
+          gh attestation verify codex-imagegen-mcp-${VERSION}.tgz --repo ${GITHUB_REPOSITORY}
+          \`\`\`
+          EOF
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            codex-imagegen-mcp-${{ env.VERSION }}.tgz
+            codex-imagegen-mcp.tgz
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            --verify-tag \
+            --discussion-category "Announcements" \
+            "codex-imagegen-mcp-${VERSION}.tgz" codex-imagegen-mcp.tgz SHA256SUMS

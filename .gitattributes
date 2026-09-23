@@ -1,0 +1,13 @@
+# Line endings: LF in the repository and in every working tree, on every platform.
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.tgz binary
+
+# Language statistics: the vendored Codex skill is provenance, not project code.
+upstream/** linguist-vendored
