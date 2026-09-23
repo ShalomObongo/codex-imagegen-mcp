@@ -37,6 +37,7 @@ async function executableExists(cmd: string, ctx: InstallContext): Promise<boole
 /** One check per tool (and scope) that has our server configured, plus the skill copies. */
 async function installationChecks(serverName: string, ctx: InstallContext): Promise<Check[]> {
   const checks: Check[] = [];
+  const show = (file: string) => tildify(file, { home: ctx.home, platform: ctx.platform });
   const clients = availableClients(ctx);
   const detections = await new Detector(ctx).detectAll(clients);
   let configured = 0;
@@ -52,7 +53,7 @@ async function installationChecks(serverName: string, ctx: InstallContext): Prom
         }
         if (state.current === undefined) continue;
         if (!isOurEntry(state.current)) {
-          checks.push({ name, status: "warn", detail: `"${serverName}" in ${tildify(state.file, ctx)} runs something else` });
+          checks.push({ name, status: "warn", detail: `"${serverName}" in ${show(state.file)} runs something else` });
           continue;
         }
         configured++;
@@ -64,7 +65,7 @@ async function installationChecks(serverName: string, ctx: InstallContext): Prom
         checks.push({
           name,
           status: problems.length === 0 ? "ok" : "fail",
-          detail: `${tildify(state.file, ctx)}: ${formatCommand(argv)}${problems.length ? ` (${problems.join("; ")}; run \`install ${client.id}\` again)` : ""}`,
+          detail: `${show(state.file)}: ${formatCommand(argv)}${problems.length ? ` (${problems.join("; ")}; run \`install ${client.id}\` again)` : ""}`,
         });
       }
     }
@@ -76,10 +77,10 @@ async function installationChecks(serverName: string, ctx: InstallContext): Prom
   const copies = await findSkillsNamed(SKILL_NAME, all);
   const legacy: string[] = [];
   for (const root of all) for (const old of LEGACY_SKILL_NAMES) if (await isOurSkill(path.join(root, old))) legacy.push(path.join(root, old));
-  if (copies.length > 0) checks.push({ name: "Agent Skill", status: "ok", detail: copies.map((c) => tildify(c, ctx)).join(", ") });
+  if (copies.length > 0) checks.push({ name: "Agent Skill", status: "ok", detail: copies.map(show).join(", ") });
   else if (configured > 0) checks.push({ name: "Agent Skill", status: "warn", detail: `no ${SKILL_NAME} skill installed (run \`install\` again without --no-skill)` });
   if (legacy.length > 0) {
-    checks.push({ name: "Old skill copies", status: "warn", detail: `${legacy.map((l) => tildify(l, ctx)).join(", ")} (from an earlier release; \`install\` replaces them)` });
+    checks.push({ name: "Old skill copies", status: "warn", detail: `${legacy.map(show).join(", ")} (from an earlier release; \`install\` replaces them)` });
   }
   return checks;
 }

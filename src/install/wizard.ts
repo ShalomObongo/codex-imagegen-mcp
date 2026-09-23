@@ -6,7 +6,7 @@ import { tildify, type InstallContext, type Scope } from "./context.js";
 import { Detector, NOT_DETECTED } from "./detect.js";
 import { npxSpec, resolveLaunch, type LaunchMode, type Runtime } from "./launch.js";
 import { applyPlan, isConfigured, planInstall, planUninstall, type ApplyResult, type Plan } from "./plan.js";
-import { manualSnippets, nextSteps, renderPlan, renderResults } from "./report.js";
+import { displayContext, manualSnippets, nextSteps, renderPlan, renderResults } from "./report.js";
 import type { Theme } from "./theme.js";
 
 export interface PromptOption<T> {
@@ -223,7 +223,7 @@ export async function installWizard(w: WizardEnv): Promise<number> {
     results = await applyPlan(plan, (m) => spin.message(m.length > 72 ? `${m.slice(0, 71)}…` : m));
     const { failed, ok } = summarize(results);
     spin.stop(failed.length === 0 ? `Done: ${ok} change${ok === 1 ? "" : "s"} applied` : `${failed.length} change${failed.length === 1 ? "" : "s"} failed`);
-    ui.note(renderResults(results, w.ctx, t).join("\n"), "Result");
+    ui.note(renderResults(results, displayContext(plan), t).join("\n"), "Result");
   }
 
   for (const m of manualSnippets(plan)) ui.note(m.snippet, `${m.title}: paste into ${m.where}`);
@@ -327,7 +327,7 @@ export async function uninstallWizard(w: WizardEnv): Promise<number> {
   const results = await applyPlan(plan, (m) => spin.message(m.length > 72 ? `${m.slice(0, 71)}…` : m));
   const { failed } = summarize(results);
   spin.stop(failed.length === 0 ? "Removed" : `${failed.length} change${failed.length === 1 ? "" : "s"} failed`);
-  ui.note(renderResults(results, w.ctx, t).join("\n"), "Result");
+  ui.note(renderResults(results, displayContext(plan), t).join("\n"), "Result");
   ui.outro(`Your ChatGPT sign-in was kept; run ${w.cli} logout to remove it too.`);
   return failed.length > 0 ? 1 : 0;
 }

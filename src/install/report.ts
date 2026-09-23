@@ -66,7 +66,12 @@ function paint(theme: Theme, tone: Tone, s: string): string {
 
 export const clientNames = (clients: readonly ClientDefinition[]) => clients.map((c) => c.label).join(", ");
 
-function target(change: Change, ctx: InstallContext): string {
+/** Paths show as `./…` only in project plans; global plans use `~/…`. */
+export function displayContext(plan: Plan): Pick<InstallContext, "home" | "platform"> & { cwd?: string } {
+  return plan.scope === "project" ? plan.ctx : { home: plan.ctx.home, platform: plan.ctx.platform };
+}
+
+function target(change: Change, ctx: Pick<InstallContext, "home" | "platform"> & { cwd?: string }): string {
   switch (change.kind) {
     case "config":
       return change.file ? tildify(change.file, ctx) : "";
@@ -123,7 +128,7 @@ export function renderPlan(plan: Plan, theme: Theme, options: { showLaunch?: boo
     lines.push(theme.bold(heading));
     for (const change of changes) {
       const [verb, tone] = PLAN_VERB[change.action] ?? [change.action, "info"];
-      lines.push(row(theme, tone, verb, target(change, plan.ctx), note(change)));
+      lines.push(row(theme, tone, verb, target(change, displayContext(plan)), note(change)));
     }
     if (plan.operation === "install") for (const c of clients) for (const n of c.notes?.(plan.scope, plan.ctx) ?? []) lines.push(`    ${theme.dim(n)}`);
   }
@@ -131,7 +136,7 @@ export function renderPlan(plan: Plan, theme: Theme, options: { showLaunch?: boo
   return lines;
 }
 
-export function renderResults(results: readonly ApplyResult[], ctx: InstallContext, theme: Theme): string[] {
+export function renderResults(results: readonly ApplyResult[], ctx: Pick<InstallContext, "home" | "platform"> & { cwd?: string }, theme: Theme): string[] {
   const lines: string[] = [];
   let heading = "";
   for (const r of results) {

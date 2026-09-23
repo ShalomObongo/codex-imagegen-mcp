@@ -7,7 +7,7 @@ import { Detector, NOT_DETECTED } from "./detect.js";
 import { renderSnippet } from "./formats.js";
 import { adaptLaunch, describeLaunch, formatCommand, LAUNCH_MODES, resolveLaunch, type LaunchMode, type Runtime } from "./launch.js";
 import { applyPlan, isConfigured, planInstall, planUninstall, type ApplyResult, type Plan } from "./plan.js";
-import { manualSnippets, nextSteps, planJson, renderPlan, renderResults } from "./report.js";
+import { displayContext, manualSnippets, nextSteps, planJson, renderPlan, renderResults } from "./report.js";
 import type { Theme } from "./theme.js";
 import { installWizard, uninstallWizard, type Prompter, type WizardEnv } from "./wizard.js";
 
@@ -108,7 +108,7 @@ function printPlanOrResults(env: CommandEnv, plan: Plan, results: ApplyResult[] 
   env.out();
   if (results) {
     if (plan.launch) env.out(`${t.dim("Launch")}  ${describeLaunch(plan.launch, plan.ctx)}\n`);
-    for (const line of renderResults(results, plan.ctx, t)) env.out(line);
+    for (const line of renderResults(results, displayContext(plan), t)) env.out(line);
   } else {
     for (const line of renderPlan(plan, t)) env.out(line);
   }

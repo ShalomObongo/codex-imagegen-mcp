@@ -186,5 +186,7 @@ export function formatCommand(argv: readonly string[]): string {
 export function describeLaunch(launch: Launch, ctx?: InstallContext): string {
   if (!ctx) return formatCommand(launch.argv);
   const p = pathApi(ctx);
-  return formatCommand(launch.argv.map((a) => (p.isAbsolute(a) ? tildify(a, ctx) : a)));
+  // `~/…` only: a cwd-relative form would suggest the config holds a relative path.
+  const home = { home: ctx.home, platform: ctx.platform };
+  return formatCommand(launch.argv.map((a) => (p.isAbsolute(a) ? tildify(a, home) : a)));
 }
