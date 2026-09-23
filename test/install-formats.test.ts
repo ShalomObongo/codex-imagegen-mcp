@@ -53,6 +53,12 @@ describe("JSON/JSONC edits", () => {
     assert.deepEqual(JSON.parse(editConfig("json", "   \n", ["servers", "imagegen"], ENTRY)), { servers: { imagegen: ENTRY } });
   });
 
+  test("a UTF-8 byte order mark is kept and not treated as an error", () => {
+    const next = editConfig("json", '\uFEFF{ "servers": {} }\n', ["servers", "imagegen"], ENTRY);
+    assert.ok(next.startsWith("\uFEFF{"));
+    assert.deepEqual(parseConfig("json", next), { servers: { imagegen: ENTRY } });
+  });
+
   test("broken files are reported, not overwritten", () => {
     assert.throws(() => editConfig("json", '{ "a": 1, ', ["mcpServers", "imagegen"], ENTRY), ConfigEditError);
     assert.throws(() => parseConfig("json", "[1, 2]"), /does not contain a JSON object/);

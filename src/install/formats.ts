@@ -282,8 +282,10 @@ const yaml: Adapter = {
 
 const ADAPTERS: Record<ConfigFormat, Adapter> = { json, toml, yaml };
 
+const BOM = "\uFEFF";
+
 export function parseConfig(format: ConfigFormat, text: string): Obj {
-  return ADAPTERS[format].parse(text);
+  return ADAPTERS[format].parse(text.startsWith(BOM) ? text.slice(1) : text);
 }
 
 /**
@@ -291,9 +293,12 @@ export function parseConfig(format: ConfigFormat, text: string): Obj {
  * re-parsed: the key must hold exactly `value` and every other key must be unchanged, otherwise
  * ConfigEditError is thrown and nothing should be written.
  */
-export function editConfig(format: ConfigFormat, text: string | undefined, keyPath: readonly string[], value: unknown, template?: Obj): string {
+export function editConfig(format: ConfigFormat, raw: string | undefined, keyPath: readonly string[], value: unknown, template?: Obj): string {
   const adapter = ADAPTERS[format];
-  if (text === undefined && value === undefined) return "";
+  if (raw === undefined && value === undefined) return "";
+  // Some Windows editors write a UTF-8 byte order mark; keep it, but don't parse it.
+  const bom = raw?.startsWith(BOM) ? BOM : "";
+  const text = raw === undefined ? undefined : raw.slice(bom.length);
   const creating = text === undefined || (text.trim() === "" && value !== undefined);
   const before = creating ? {} : adapter.parse(text);
   let next = creating ? adapter.create(keyPath, value, template) : adapter.update(text, keyPath, value);
@@ -311,7 +316,7 @@ export function editConfig(format: ConfigFormat, text: string | undefined, keyPa
   if (!sameValue(getIn(after, keyPath), value) || !sameValue(without(after, keyPath), expectedRest)) {
     throw new ConfigEditError("the edit could not be verified, so nothing was written");
   }
-  return next;
+  return bom + next;
 }
 
 /** A standalone snippet (for manual setup): `value` nested under `keyPath`. */
