@@ -4,7 +4,7 @@
 
 <p align="center">
   <b>Codex's image generation, in every coding agent.</b><br>
-  Generate and edit images from opencode, Claude Code, Cursor, VS Code and any other MCP client.<br>
+  Generate and edit images from opencode, Claude Code, Codex, Cursor, VS Code, Gemini CLI and 20 more tools.<br>
   It runs on the ChatGPT plan you already pay for, so there's no API key and no per-image bill.
 </p>
 
@@ -39,8 +39,8 @@
     </td>
     <td width="33%" valign="top">
       <img src="docs/assets/badges/clients.png" width="76" alt=""><br>
-      <b>Works in any MCP client</b><br>
-      A standard local stdio server. opencode installs in one command; Claude Code, Cursor, VS Code, Windsurf and Gemini CLI take one pasted snippet.
+      <b>One installer, 25+ tools</b><br>
+      <code>codex-imagegen-mcp install</code> finds your coding tools, shows every file it will touch, and edits only its own entry, keeping your comments.
     </td>
     <td width="33%" valign="top">
       <img src="docs/assets/badges/transparency.png" width="76" alt=""><br>
@@ -62,7 +62,7 @@
     <td width="33%" valign="top">
       <img src="docs/assets/badges/skill.png" width="76" alt=""><br>
       <b>Codex's own playbook</b><br>
-      Ships the <code>imagegen</code> skill from the Codex app, adapted to these tools: prompt structure, edit invariants, save rules.
+      Ships the Codex app's <code>imagegen</code> skill as <code>imagegen-mcp</code>, adapted to these tools: prompt structure, edit invariants, save rules.
     </td>
   </tr>
 </table>
@@ -77,7 +77,7 @@ Two real opencode sessions in a scratch project. The images are exactly what cam
 
 > **You:** I need a sticker-style illustration of a cute cartoon cactus with a transparent background for this project. Save it as `assets/cactus-sticker.png`.
 >
-> **opencode** · `openai/gpt-5.5` loads the `imagegen` skill → `imagegen_generate_image` with `background: "transparent"` → *"Saved `assets/cactus-sticker.png`, 1254×1254 PNG with a transparent background."*
+> **opencode** · `openai/gpt-5.5` loads the skill → `imagegen_generate_image` with `background: "transparent"` → *"Saved `assets/cactus-sticker.png`, 1254×1254 PNG with a transparent background."*
 >
 > **You:** Make a 16:9 hero banner for the Cactus Shop landing page, and a variant of the sticker where the cactus wears a tiny straw hat. Keep everything else identical.
 >
@@ -96,7 +96,7 @@ Two real opencode sessions in a scratch project. The images are exactly what cam
 </p>
 
 > [!TIP]
-> Every image in this repository was made with codex-imagegen-mcp itself. That covers the posters, the badges, the logo and the examples. The prompts and the art-direction record are in [docs/assets](docs/assets/README.md).
+> Every image in this repository was made with codex-imagegen-mcp itself. That covers the posters, the badges, the logo and the examples; the installer screenshots are real terminal output. The prompts and the art-direction record are in [docs/assets](docs/assets/README.md).
 
 ## Quick start
 
@@ -129,13 +129,25 @@ npm link                                  # puts `codex-imagegen-mcp` on your PA
 
 </details>
 
-**2 · Add it to opencode.** This registers the MCP server and the skill, keeping your config's comments and formatting.
+**2 · Add it to your coding tools.** The installer finds the tools on this machine and shows exactly which files it will create or change before it touches anything. It keeps each config's comments and formatting.
 
 ```bash
-codex-imagegen-mcp install opencode
+codex-imagegen-mcp install
 ```
 
-**3 · Sign in with ChatGPT.** Skip this if Codex or opencode is already signed in with ChatGPT.
+<p align="center">
+  <img src="docs/assets/screens/installer-pick.png" width="100%" alt="The interactive installer: it found 10 of 25 supported tools and lists them grouped as terminal agents and editors, with the detected ones pre-selected">
+</p>
+
+It also runs without questions, for scripts and dotfiles:
+
+```bash
+codex-imagegen-mcp install opencode cursor claude-code   # named tools (see --list)
+codex-imagegen-mcp install --all --dry-run               # every detected tool, preview only
+npx -y codex-imagegen-mcp install                        # or skip step 1: configs then use npx
+```
+
+**3 · Sign in with ChatGPT.** The installer offers this at the end. Skip it if Codex or opencode is already signed in with ChatGPT.
 
 ```bash
 codex-imagegen-mcp login                  # opens the browser; use --device on a headless machine
@@ -144,8 +156,7 @@ codex-imagegen-mcp login                  # opens the browser; use --device on a
 **4 · Check, then ask for pictures**
 
 ```bash
-codex-imagegen-mcp doctor                 # Node, credentials, quota, opencode entry, skill
-opencode mcp list                         # → ✓ imagegen connected
+codex-imagegen-mcp doctor                 # Node, credentials, quota, and every tool it's installed in
 ```
 
 ```text
@@ -217,18 +228,20 @@ codex-imagegen-mcp generate "a watercolor fox in a snowy forest" -a 16:9 -o art/
 codex-imagegen-mcp generate "Image 1: add a tiny straw hat; keep everything else" \
   -i assets/cactus.png -b transparent -o assets/cactus-hat.png
 codex-imagegen-mcp remove-bg sprite-on-green.png -o sprite.png
-codex-imagegen-mcp config claude-code     # print the setup for another client
+codex-imagegen-mcp config zed              # print a tool's config snippet to add by hand
 ```
 
-## Other clients
+## Supported tools
 
-| Client | Setup |
+| | |
 |---|---|
-| **opencode** | `codex-imagegen-mcp install opencode` (automated, reversible with `uninstall`) |
-| **Claude Code** | `claude mcp add --scope user imagegen -- node /path/to/dist/src/cli.js serve` |
-| **Claude Desktop · Cursor · VS Code · Windsurf · Gemini CLI · Codex** | `codex-imagegen-mcp config <client>` prints a ready-to-paste config |
+| **Terminal agents** | OpenCode · Claude Code · Codex · Gemini CLI · GitHub Copilot CLI · Amp · Goose · Factory Droid · Qwen Code · JetBrains Junie · Augment (Auggie) |
+| **Editors & IDEs** | Cursor · VS Code, Insiders and VSCodium · Devin Desktop (formerly Windsurf) · Zed · Kiro · Google Antigravity · Visual Studio (Windows) |
+| **Desktop apps** | Claude Desktop, with the skill as an uploadable zip |
+| **Editor extensions** | Cline · Zoo Code / Roo Code · Kilo Code |
+| **By hand** | JetBrains AI Assistant (the installer prints the JSON to paste) · anything else: `codex-imagegen-mcp config <tool>` |
 
-Per-client guidance, including where each one loads skills from: [docs/CLIENTS.md](docs/CLIENTS.md).
+Each tool gets its own config format, timeout field and skill folder. `install --list` shows which ones are on your machine. [Files, timeouts and skill folders per tool →](docs/CLIENTS.md#supported-tools)
 
 ## Documentation
 
@@ -247,7 +260,7 @@ Per-client guidance, including where each one loads skills from: [docs/CLIENTS.m
     <td width="33%" valign="top">
       <a href="docs/CLIENTS.md"><img src="docs/assets/thumbs/banner-clients.jpg" alt="Clients"></a><br>
       <b><a href="docs/CLIENTS.md">Clients</a></b><br>
-      opencode, Claude Code, Cursor, VS Code, Windsurf, Gemini CLI and more.
+      The installer, and the 25+ supported tools: files, timeouts, skills.
     </td>
   </tr>
   <tr>
@@ -342,7 +355,7 @@ Test-only overrides: `CODEX_IMAGEGEN_BASE_URL`, `CODEX_IMAGEGEN_USAGE_URL`, `COD
 
 ## Troubleshooting
 
-Start with `codex-imagegen-mcp doctor`. It checks Node, the data directory, credentials, backend reachability and quota, the sign-in ports, the opencode entry and duplicate skills.
+Start with `codex-imagegen-mcp doctor`. It checks Node, the data directory, credentials, backend reachability and quota, the sign-in ports, every tool that has imagegen configured, and the skill copies.
 
 <details>
 <summary>Common problems</summary>
@@ -354,7 +367,8 @@ Start with `codex-imagegen-mcp doctor`. It checks Node, the data directory, cred
 | `usage limit … resets in …` | Wait for the reset; `status` shows the windows |
 | `ports 1455 and 1457 are busy` | Another Codex or opencode login is waiting. Finish it, or use `login --device` |
 | `Device-code sign-in is not enabled` | ChatGPT → Settings → Security → allow device code authorization for Codex |
-| Tools missing in opencode | Check `opencode mcp list`, re-run `install opencode`, then restart opencode |
+| Tools missing in a client | Run `doctor`, re-run `install <tool>`, then restart the tool (`install --list` shows the ids) |
+| `conflict` in the installer | Another server already uses the name `imagegen`: pass `--name`, or `--force` to replace it |
 | An opaque result despite `transparent` | Retry, or generate on a flat `#00FF00` backdrop and run `remove_background` |
 
 Still stuck? See [getting help](.github/SUPPORT.md).

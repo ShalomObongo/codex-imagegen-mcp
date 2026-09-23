@@ -61,12 +61,14 @@ flowchart TB
 | `src/status.ts` | Collects and formats sign-in, source and usage status |
 | `src/history.ts` | The append-only `history.jsonl` |
 | `src/server/` | MCP wiring: tools, resources, prompts, instructions, progress, roots, background sign-in |
-| `src/install/` | The opencode installer (JSONC edits, skill copy) and snippets for other clients |
+| `src/install/` | The multi-client installer: `clients.ts` (the registry of 26 tools), `formats.ts` (JSONC/TOML/YAML edits), `launch.ts`, `detect.ts`, `skills.ts`, `plan.ts` (plan, apply, uninstall), `wizard.ts` (the clack UI) and `commands.ts`. Design notes: [INSTALLER.md](INSTALLER.md) |
+| `src/login.ts` | The terminal ChatGPT sign-in, shared by `login` and the installer |
 | `src/doctor.ts` | Environment diagnostics |
 | `src/cli.ts` | The command-line entry point; `serve` is the MCP entry |
 | `skill/imagegen-mcp/` | The Agent Skill shipped with the server |
 | `upstream/` | Byte-exact copy of Codex's original skill, for provenance and diffing |
 | `scripts/compose-doc-art.py` | Builds the documentation artwork from raw generations |
+| `scripts/render-installer-screens.py` | Renders the installer screenshots from a real terminal session |
 
 ## Request flow: `generate_image`
 
@@ -116,6 +118,8 @@ Each variant is saved **as soon as it arrives**, so partial success is kept even
 - **Background sign-in inside the server.** `sign_in` can hand the user a link at once. MCP elicitation isn't widely supported (opencode lacks it), so returning the link as text is the portable choice.
 - **Pure-JS image handling.** `pngjs` and `jpeg-js` mean no native dependencies, so it installs everywhere, which matters because MCP servers are launched from many environments.
 - **Never overwrite.** This mirrors the Codex skill's save policy, and it's enforced in code (`wx` exclusive create with versioned siblings) rather than merely requested of the model.
+- **The installer plans, then applies.** Planning is read-only and produces the review the user sees; applying re-reads each file before writing. Clients are declarative records, so adding one is data plus a test, and every client gets the same backups, conflict protection and uninstall rules.
+- **Edit, don't rewrite.** Configs belong to other tools and often to their users' dotfiles. JSONC, TOML and YAML are edited only at our key, and each edit is re-parsed and compared before anything is written.
 - **stdout hygiene.** In `serve`, `console.log`, `console.info` and `console.debug` are redirected to stderr, and logs go to stderr plus `server.log`. The server exits when stdin closes, which is how clients stop stdio servers.
 
 ---

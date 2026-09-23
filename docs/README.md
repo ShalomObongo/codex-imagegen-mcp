@@ -21,7 +21,7 @@ codex-imagegen-mcp puts the image generation of OpenAI Codex into any MCP client
     <td width="33%" valign="top">
       <a href="CLIENTS.md"><img src="assets/thumbs/banner-clients.jpg" alt="Clients"></a><br>
       <b>3 · <a href="CLIENTS.md">Clients</a></b><br>
-      <sub>opencode (automated), Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Gemini CLI, Codex.</sub>
+      <sub>The interactive installer and 25+ tools: config files, timeouts, skill folders, per-tool notes.</sub>
     </td>
   </tr>
   <tr>
@@ -49,7 +49,7 @@ codex-imagegen-mcp puts the image generation of OpenAI Codex into any MCP client
 |---|---|
 | Install it and make a first image | The [README quick start](../README.md#quick-start), then [Tools](TOOLS.md) |
 | Know how it signs in, and whether that's safe | [Authentication](AUTH.md) |
-| Use it outside opencode | [Clients](CLIENTS.md) |
+| Set it up in your coding tools, or add a new one | [Clients](CLIENTS.md), then [INSTALLER.md](INSTALLER.md) for the design |
 | Understand what Codex does under the hood | [Backend](BACKEND.md) |
 | Change the code | [Architecture](ARCHITECTURE.md), then [Development](DEVELOPMENT.md) |
 
@@ -77,7 +77,7 @@ flowchart LR
 
 ## About the artwork
 
-Every picture in these docs was generated **with codex-imagegen-mcp itself**, using the `imagegen` skill it ships: the poster banners, the badges, the logo and the examples. The series follows one art direction, a 1930s WPA silkscreen travel poster in five flat inks. [The prompts, the direction record and how to rebuild the assets →](assets/README.md)
+Every picture in these docs was generated **with codex-imagegen-mcp itself**, using the skill it ships: the poster banners, the badges, the logo and the examples. The installer screenshots are real terminal output. The series follows one art direction, a 1930s WPA silkscreen travel poster in five flat inks. [The prompts, the direction record and how to rebuild the assets →](assets/README.md)
 
 ---
 

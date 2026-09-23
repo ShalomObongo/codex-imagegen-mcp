@@ -40,14 +40,29 @@ body:
     attributes:
       label: Where did it happen?
       options:
-        - opencode
+        - The installer (codex-imagegen-mcp install / uninstall)
+        - OpenCode
         - Claude Code
-        - Claude Desktop
-        - OpenAI Codex
-        - Cursor
-        - VS Code (GitHub Copilot)
-        - Windsurf
+        - Codex (CLI, IDE extension or app)
         - Gemini CLI
+        - GitHub Copilot CLI
+        - Cursor
+        - VS Code, VS Code Insiders or VSCodium
+        - Claude Desktop
+        - Devin Desktop or Windsurf
+        - Zed
+        - Cline
+        - Zoo Code or Roo Code
+        - Kilo Code
+        - Amp
+        - Goose
+        - Factory Droid
+        - Qwen Code
+        - Kiro
+        - JetBrains (Junie or AI Assistant)
+        - Augment (Auggie CLI)
+        - Google Antigravity
+        - Visual Studio
         - Another MCP client
         - The codex-imagegen-mcp command line itself
     validations:

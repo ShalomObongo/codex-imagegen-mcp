@@ -4,7 +4,9 @@
 
 # The artwork
 
-Every image in this repository was generated with **codex-imagegen-mcp itself**: the posters, banners, badges, logo and examples. The tools ran from opencode, following the `imagegen` skill this project ships. Nothing was drawn by hand, and nothing is stock. The only local steps were deterministic: typesetting, cropping, slicing and compression, all done by [`scripts/compose-doc-art.py`](../../scripts/compose-doc-art.py).
+Every image in this repository was generated with **codex-imagegen-mcp itself**: the posters, banners, badges, logo and examples. The tools ran from opencode, following the skill this project ships (then called `imagegen`, now `imagegen-mcp`). Nothing was drawn by hand, and nothing is stock. The only local steps were deterministic: typesetting, cropping, slicing and compression, all done by [`scripts/compose-doc-art.py`](../../scripts/compose-doc-art.py).
+
+The exception is [`screens/`](screens): the installer screenshots are a real `codex-imagegen-mcp install` session in a throwaway home directory. [`scripts/render-installer-screens.py`](../../scripts/render-installer-screens.py) records it in a pseudo-terminal, replays it through a terminal emulator and draws it in the same five inks, so running it again reproduces the images.
 
 That makes this page both the art credits and a worked example of the tools on a real, multi-asset job: **15 generations and one local `remove_background` call**, about 5% of a ChatGPT Plus 5-hour window.
 

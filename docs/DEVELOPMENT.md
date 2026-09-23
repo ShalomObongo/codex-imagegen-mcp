@@ -6,7 +6,7 @@
 
 Build it, test it without touching OpenAI, test it live, and ship it.
 
-**On this page:** [Setup](#setup) · [Layout](#layout) · [Tests](#tests) · [Continuous integration](#continuous-integration) · [Live testing](#live-testing) · [Conventions](#conventions) · [Artwork](#artwork) · [Updating from upstream Codex](#updating-from-upstream-codex) · [Releasing](#releasing)
+**On this page:** [Setup](#setup) · [Layout](#layout) · [Tests](#tests) · [Continuous integration](#continuous-integration) · [Live testing](#live-testing) · [Conventions](#conventions) · [Adding a client](#adding-a-client) · [Artwork](#artwork) · [Updating from upstream Codex](#updating-from-upstream-codex) · [Releasing](#releasing)
 
 ## Setup
 
@@ -30,7 +30,8 @@ src/             TypeScript sources (see ARCHITECTURE.md)
 test/            node:test suites; test/helpers/mock-openai.ts mocks auth.openai.com + the ChatGPT backend
 skill/imagegen-mcp/  the Agent Skill shipped with the server
 upstream/        byte-exact copy of the Codex skill it was adapted from
-scripts/         compose-doc-art.py builds docs/assets from raw generations
+scripts/         compose-doc-art.py builds docs/assets from raw generations;
+                 render-installer-screens.py renders docs/assets/screens
 docs/            this documentation; docs/assets holds the artwork
 ```
 
@@ -63,7 +64,7 @@ flowchart LR
 
 - **The mock behaves like the real service where it matters.** It checks the PKCE `code_verifier` against the challenge and the `redirect_uri`, and its refresh tokens are **single-use**: a second use returns `refresh_token_reused`, just as OpenAI does.
 - **Scripting failures:** queue responses in `state.imageQueue` to simulate 401, 429, 5xx, policy and Cloudflare errors, and set delays to exercise timeouts and locking.
-- **Nothing real is touched.** `test/helpers/env.ts` builds an isolated `CODEX_IMAGEGEN_*` environment in a temp directory, so tests never read or write your credentials. The installer tests also point `HOME` and `XDG_CONFIG_HOME` at temp directories.
+- **Nothing real is touched.** `test/helpers/env.ts` builds an isolated `CODEX_IMAGEGEN_*` environment in a temp directory, so tests never read or write your credentials. The installer tests pass an `InstallContext` (platform, home, cwd, env) pointing at a temp home. Path logic never reads process globals, so the same tests also model macOS, Linux and Windows machines, and CLI tests run with a `PATH` that contains only Node, so no real coding tool is ever launched.
 
 | Suite | Covers |
 |---|---|
@@ -72,7 +73,10 @@ flowchart LR
 | `login-flows` | Browser round trip, state mismatch, authorize errors, failed exchange, cancel, timeout, device code |
 | `images-client` | Exact request body and headers, edits, retries, usage limits, policy/invalid/Cloudflare mapping, the usage API |
 | `image-processing` | Codec, previews, chroma key, output planning, no-overwrite writes, input validation |
-| `install` | JSONC-preserving opencode edits, backups, idempotency, conflict protection, uninstall, snippets |
+| `install-formats` | JSONC, Codex TOML and Goose YAML edits: comments, key order, CRLF, BOM, multi-line strings, refused inline tables, edit verification |
+| `install-registry` | Config paths per OS and env override, entry schemas and timeout units, skill folders, launch resolution, detection |
+| `install-plan` | Multi-client installs and re-runs, conflicts and `--force`, broken files, old-skill migration, uninstall that keeps shared skills, symlinks and file modes, the `claude mcp` path, project scope, the Claude Desktop zip |
+| `install-wizard` | The interactive flow with scripted answers: pre-selection, cancel, replacing a conflict, sign-in, uninstall |
 | `server` | Full MCP over stdio: tools, resources, prompts, progress, errors, sign-in via the tool and then generation |
 | `cli` | Every command end to end against the mock |
 
@@ -84,7 +88,7 @@ Every push to `main` and every pull request runs [CI](../.github/workflows/ci.ym
 |---|---|
 | **Node 22 · 24 · 26** on Linux | `npm ci`, `npm run typecheck`, `npm test`, a CLI smoke test |
 | **Node 24** on macOS and Windows | The same, on the other two platforms |
-| **Package and install** | `npm pack`, a global install of the tarball, and that the installed CLI runs and ships its skill |
+| **Package and install** | `npm pack`, a global install of the tarball, that the installed CLI runs and ships its skill, `install --list` and an `install --dry-run` |
 
 Actions are pinned to commit SHAs, and [Dependabot](../.github/dependabot.yml) keeps them and the npm dependencies current. CodeQL code scanning runs on GitHub's default setup.
 
@@ -96,6 +100,7 @@ Actions are pinned to commit SHAs, and [Dependabot](../.github/dependabot.yml) k
 ```bash
 node dist/src/cli.js status                        # auth + usage, no quota
 node dist/src/cli.js generate "a red apple" -o tmp/live/apple.png
+HOME=$(mktemp -d) node dist/src/cli.js install     # try the installer against a throwaway home
 node dist/src/cli.js install opencode && opencode mcp list
 opencode run -m openai/gpt-5.5 "make a transparent sticker of a cactus, save to assets/cactus.png"
 opencode run -m github-copilot/claude-sonnet-5 "…"  # Copilot providers take a different media path in opencode
@@ -110,6 +115,15 @@ opencode run -m github-copilot/claude-sonnet-5 "…"  # Copilot providers take a
 - **Limits live in descriptions too.** Some clients strip schema constraints before the model sees them.
 - **Claims about the backend must be measured.** Record them in [Backend](BACKEND.md) with the date.
 - **The skill tracks upstream.** Diff changes against `upstream/codex-imagegen-skill/` and keep the prompting guidance aligned.
+
+## Adding a client
+
+Clients are data. To support a new tool:
+
+1. **Research it first.** Find its MCP config file per OS and scope, the root key and entry schema, the timeout field and its unit, the skill folders it reads, and how it's detected. Prefer the tool's source and official docs over third-party installers; several of those write outdated paths. Leave out anything you can't verify.
+2. **Add a record to `CLIENT_REGISTRY` in `src/install/clients.ts`.** Declare its `configs` per scope (JSON, TOML or YAML, with candidate files and the root key path), its `entry` (reuse `stdio()` and add its timeout in its own unit), the `skills` folders in preference order, `detect` hints, `restart`, and any `notes`. Set `gui: true` for apps that may start without the shell `PATH`.
+3. **Test it** in `test/install-registry.test.ts`: its paths on each OS and the exact entry. The engine tests already cover the edit, backup and uninstall behaviour.
+4. **Document it** in the support matrix in [Clients](CLIENTS.md) and the client list of the bug-report form.
 
 ## Artwork
 
@@ -130,6 +144,12 @@ The script does five things:
 
 Paper grain is seeded, so reruns are byte-stable.
 
+The installer screenshots in `docs/assets/screens/` come from a real session instead. The script installs the packed tarball into a throwaway home, drives `codex-imagegen-mcp install` in a pseudo-terminal, replays it through the pyte terminal emulator and draws it in the docs palette. It needs macOS fonts and `pip install pyte fonttools pillow`, and shows whichever tools are installed on the machine:
+
+```bash
+npm pack && python3 scripts/render-installer-screens.py codex-imagegen-mcp-X.Y.Z.tgz
+```
+
 ## Updating from upstream Codex
 
 1. **Extract the current skill:** `CODEX_HOME=$(mktemp -d) /Applications/ChatGPT.app/Contents/Resources/codex debug prompt-input hi >/dev/null`. This installs the embedded system skills into `$CODEX_HOME/skills/.system/`.
@@ -140,7 +160,7 @@ Paper grain is seeded, so reruns are byte-stable.
 
 Releases are automated. A maintainer only has to:
 
-1. Make sure `main` is green in CI, and run the live smoke test: `status`, one `generate`, one edit with `-b transparent`, `doctor`, plus one `opencode run`.
+1. Make sure `main` is green in CI, and run the live smoke test: `status`, one `generate`, one edit with `-b transparent`, `doctor`, `install --all --dry-run`, plus one `opencode run`.
 2. Bump `version` in `package.json` (then `npm install --package-lock-only`) and add a `## [X.Y.Z] - YYYY-MM-DD` entry to `CHANGELOG.md`, with its compare link at the bottom.
 3. Commit, then tag and push: `git tag -a vX.Y.Z -m "…" && git push origin main vX.Y.Z`.
 

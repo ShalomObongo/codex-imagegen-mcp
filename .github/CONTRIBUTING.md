@@ -6,6 +6,7 @@ Thanks for helping improve codex-imagegen-mcp. Bug reports, docs fixes, support 
 
 - **Small fixes** (typos, docs, clear bugs): open a pull request directly.
 - **Larger changes** (new tools, new clients, behaviour changes): open an [issue](https://github.com/ShalomObongo/codex-imagegen-mcp/issues/new/choose) or a [discussion](https://github.com/ShalomObongo/codex-imagegen-mcp/discussions) first, so we can agree on the approach before you spend time on it.
+- **Supporting another coding tool** is mostly data: a record in `src/install/clients.ts`, a test and a row in the support matrix. [Adding a client](../docs/DEVELOPMENT.md#adding-a-client) walks through it. Please link the tool's docs or source for every path and field.
 - **Security issues**: report them privately; see [SECURITY.md](SECURITY.md).
 
 ## Development setup
