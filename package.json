@@ -53,10 +53,13 @@
     "agent-skills"
   ],
   "dependencies": {
+    "@clack/prompts": "^1.8.1",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "jpeg-js": "^0.4.4",
     "jsonc-parser": "^3.3.1",
     "pngjs": "^7.0.0",
+    "smol-toml": "^1.9.0",
+    "yaml": "^2.9.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
