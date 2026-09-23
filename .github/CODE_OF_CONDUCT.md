@@ -36,7 +36,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement privately, using GitHub's **Report content → Report to repository admins** option on the comment, issue or discussion concerned, or by contacting the maintainer, [@ShalomObongo](https://github.com/ShalomObongo), through the details on their GitHub profile. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement privately. This project publishes no email address, so open a [private conduct report request](https://github.com/ShalomObongo/codex-imagegen-mcp/issues/new?template=conduct_contact.yml), which contains no details, and the maintainer, [@ShalomObongo](https://github.com/ShalomObongo), will reply to arrange a private channel. Behavior that also breaks GitHub's policies can be reported to GitHub directly, with the **Report content** option on the comment, issue or discussion concerned. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 

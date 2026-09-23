@@ -1,0 +1,17 @@
+name: Private conduct report request
+description: Ask the maintainer for a private channel to report a Code of Conduct concern. Include no details here.
+title: "Private conduct report request"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is **public**. Use it only to ask for a private channel; the maintainer will reply here to arrange one.
+
+        **Don't include any details** about the incident or the people involved. For anything that also breaks GitHub's policies, you can report it to GitHub directly with the **Report content** option on the comment, issue or discussion.
+  - type: checkboxes
+    id: no-details
+    attributes:
+      label: Confirmation
+      options:
+        - label: This issue contains no details about the incident or the people involved.
+          required: true

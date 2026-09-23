@@ -83,10 +83,21 @@ jobs:
             codex-imagegen-mcp-${{ env.VERSION }}.tgz
             codex-imagegen-mcp.tgz
 
+      - name: Keep the package for the npm job
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package
+          path: codex-imagegen-mcp-${{ env.VERSION }}.tgz
+          if-no-files-found: error
+
       - name: Publish the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "The ${GITHUB_REF_NAME} release already exists; leaving it unchanged."
+            exit 0
+          fi
           gh release create "${GITHUB_REF_NAME}" \
             --repo "${GITHUB_REPOSITORY}" \
             --title "${GITHUB_REF_NAME}" \
@@ -94,3 +105,36 @@ jobs:
             --verify-tag \
             --discussion-category "Announcements" \
             "codex-imagegen-mcp-${VERSION}.tgz" codex-imagegen-mcp.tgz SHA256SUMS
+
+  npm:
+    # Publishes the exact tarball attached to the GitHub release, through npm trusted publishing
+    # (OIDC): no long-lived token, and npm adds a provenance statement automatically. Re-runnable:
+    # an already-published version is skipped.
+    name: Publish to npm
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # OIDC for npm trusted publishing
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: package
+      - name: Use an npm with trusted publishing (11.5.1 or newer)
+        run: |
+          node -e 'const [a, b, c] = process.argv[1].split(".").map(Number); process.exit(a > 11 || (a === 11 && (b > 5 || (b === 5 && c >= 1))) ? 0 : 1)' "$(npm --version)" \
+            || npm install --global npm@11
+          npm --version
+      - name: Publish
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if npm view "codex-imagegen-mcp@${version}" version >/dev/null 2>&1; then
+            echo "codex-imagegen-mcp@${version} is already on npm; nothing to do."
+            exit 0
+          fi
+          npm publish "./codex-imagegen-mcp-${version}.tgz" --access public
