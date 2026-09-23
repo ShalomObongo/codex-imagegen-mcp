@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an improvement, a new client, or a new capability.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The ChatGPT image service chooses the model, pixel size and quality itself (see [Backend](https://github.com/ShalomObongo/codex-imagegen-mcp/blob/main/docs/BACKEND.md#what-the-service-honors)). Requests to select them can't be implemented with a ChatGPT sign-in.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: The situation you're in and why the current behaviour falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered

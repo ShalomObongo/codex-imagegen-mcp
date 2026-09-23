@@ -1,0 +1,74 @@
+name: Bug report
+description: Something doesn't work the way the docs say it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug.
+
+        > **Never paste tokens or the contents of any `auth.json`.** `codex-imagegen-mcp doctor` and `codex-imagegen-mcp status` print no secrets, so their output is safe to share.
+
+        Security problems belong in a [private advisory](https://github.com/ShalomObongo/codex-imagegen-mcp/security/advisories/new), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. codex-imagegen-mcp install opencode
+        2. In opencode: "make a 16:9 hero image of a lighthouse and save it to assets/hero.png"
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `codex-imagegen-mcp --version`.
+      placeholder: "0.1.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: Where did it happen?
+      options:
+        - opencode
+        - Claude Code
+        - Claude Desktop
+        - OpenAI Codex
+        - Cursor
+        - VS Code (GitHub Copilot)
+        - Windsurf
+        - Gemini CLI
+        - Another MCP client
+        - The codex-imagegen-mcp command line itself
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS, Linux, Windows, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `codex-imagegen-mcp doctor`
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines
+      description: >-
+        From `~/.local/share/codex-imagegen-mcp/server.log`. Set `CODEX_IMAGEGEN_LOG_LEVEL=debug` for more detail.
+        The log never contains tokens, but check before posting.
+      render: text

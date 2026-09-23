@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question or share an idea
+    url: https://github.com/ShalomObongo/codex-imagegen-mcp/discussions
+    about: Questions, ideas and show-and-tell live in GitHub Discussions.
+  - name: Report a security vulnerability
+    url: https://github.com/ShalomObongo/codex-imagegen-mcp/security/advisories/new
+    about: Please report security issues privately, never as a public issue.
+  - name: Read the documentation
+    url: https://github.com/ShalomObongo/codex-imagegen-mcp/tree/main/docs#readme
+    about: Installation, sign-in, tools, clients and troubleshooting.
