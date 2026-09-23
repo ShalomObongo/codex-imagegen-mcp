@@ -178,6 +178,8 @@ export function planJson(plan: Plan, results?: readonly ApplyResult[]) {
     clients: "clients" in change ? change.clients.map((c) => c.id) : [],
     path: change.kind === "config" || change.kind === "skill-zip" ? change.file : change.kind === "manual" ? undefined : change.dir,
     action: change.action,
+    // Key path of the entry inside the file, e.g. ["mcpServers", "imagegen"].
+    ...(change.kind === "config" && change.keyPath.length > 0 ? { key: change.keyPath } : {}),
     ...(change.kind === "config" && change.reason ? { reason: change.reason } : {}),
     ...(change.kind === "config" && change.entry && plan.operation === "install" ? { entry: change.entry } : {}),
     ...(change.kind === "manual" ? { where: change.where, snippet: change.snippet } : {}),
