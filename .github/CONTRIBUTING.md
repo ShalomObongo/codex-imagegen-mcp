@@ -30,7 +30,7 @@ You need Node.js 22 or newer. [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) cove
 2. **Keep it focused.** One logical change per pull request is easier to review and to revert.
 3. **Test it.** Add or update tests in `test/` for any behaviour change. Tests run against `test/helpers/mock-openai.ts` and an isolated temp home, so they never touch real credentials.
 4. **Update the docs.** README, `docs/`, and the skill in `skill/imagegen-mcp/` if behaviour, options or output change. Keep limits in tool descriptions too, because some clients strip JSON-Schema constraints.
-5. **Add a `CHANGELOG.md` entry** that describes the change from the user's side.
+5. **Add a `CHANGELOG.md` entry** under `## [Unreleased]` that describes the change from the user's side. It becomes the release notes, and CI checks the file's format.
 
 ### Conventions
 
@@ -52,7 +52,7 @@ The history uses [Conventional Commits](https://www.conventionalcommits.org/): `
 
 ## Releases
 
-Maintainers bump `version` in `package.json`, add the `CHANGELOG.md` entry and push a `vX.Y.Z` tag. The [release workflow](workflows/release.yml) then tests, packs, attests and publishes the GitHub release with the changelog notes.
+A maintainer cuts a release with the **Prepare release** workflow. It bumps the version, turns the `[Unreleased]` notes into the new version's section, tags `main` and starts the [release pipeline](workflows/release.yml). The pipeline runs the full test matrix, installs and starts the packed tarball on Linux, macOS and Windows, and publishes the GitHub release and the npm package: the same file, with signed provenance. It then checks the published package through `npx`. [Releasing](../docs/DEVELOPMENT.md#releasing) has the details.
 
 ## Code of Conduct
 

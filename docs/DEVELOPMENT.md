@@ -30,8 +30,9 @@ src/             TypeScript sources (see ARCHITECTURE.md)
 test/            node:test suites; test/helpers/mock-openai.ts mocks auth.openai.com + the ChatGPT backend
 skill/imagegen-mcp/  the Agent Skill shipped with the server
 upstream/        byte-exact copy of the Codex skill it was adapted from
-scripts/         compose-doc-art.py builds docs/assets from raw generations;
-                 render-installer-screens.py renders docs/assets/screens
+scripts/         release.ts (versions, changelog, release notes), smoke.ts and
+                 verify-published.ts (release checks); compose-doc-art.py and
+                 render-installer-screens.py build docs/assets
 docs/            this documentation; docs/assets holds the artwork
 ```
 
@@ -77,6 +78,7 @@ flowchart LR
 | `install-registry` | Config paths per OS and env override, entry schemas and timeout units, skill folders, launch resolution, detection |
 | `install-plan` | Multi-client installs and re-runs, conflicts and `--force`, broken files, old-skill migration, uninstall that keeps shared skills, symlinks and file modes, the `claude mcp` path, project scope, the Claude Desktop zip |
 | `install-wizard` | The interactive flow with scripted answers: pre-selection, cancel, replacing a conflict, sign-in, uninstall |
+| `release-script` | Version bumps (npm's rules), SemVer precedence, promoting `[Unreleased]`, compare links, the changelog lint, release notes, `prepare` and `plan` end to end |
 | `server` | Full MCP over stdio: tools, resources, prompts, progress, errors, sign-in via the tool and then generation |
 | `cli` | Every command end to end against the mock |
 
@@ -88,9 +90,16 @@ Every push to `main` and every pull request runs [CI](../.github/workflows/ci.ym
 |---|---|
 | **Node 22 · 24 · 26** on Linux | `npm ci`, `npm run typecheck`, `npm test`, a CLI smoke test |
 | **Node 24** on macOS and Windows | The same, on the other two platforms |
-| **Package and install** | `npm pack`, a global install of the tarball, that the installed CLI runs and ships its skill, `install --list` and an `install --dry-run` |
+| **Package** on Linux, macOS and Windows | `npm pack`, then [`scripts/smoke.ts`](../scripts/smoke.ts) on the tarball: a global install; installs into 18 tools (19 on Windows) in a throwaway home; reads every written config back; starts the server through each config and speaks MCP to it, with only a GUI app's `PATH` for GUI apps; runs `doctor` and `uninstall --all`. Twice: with the absolute-Node launch and with the global command, which covers the `cmd /c` wrapping on Windows. On Linux it also runs `release.js check`, so a malformed changelog fails the push rather than a release. |
 
-Actions are pinned to commit SHAs, and [Dependabot](../.github/dependabot.yml) keeps them and the npm dependencies current. CodeQL code scanning runs on GitHub's default setup.
+The release pipeline reuses the same workflow (`workflow_call`) on the release tag. Actions are pinned to commit SHAs, and [Dependabot](../.github/dependabot.yml) keeps them and the npm dependencies current. CodeQL code scanning runs on GitHub's default setup.
+
+To run the smoke test locally (it never touches your real home directory or tools):
+
+```bash
+npm pack && node dist/scripts/smoke.js --tarball codex-imagegen-mcp-X.Y.Z.tgz
+node dist/scripts/smoke.js --registry X.Y.Z        # the published version, through npx
+```
 
 ## Live testing
 
@@ -158,33 +167,76 @@ npm pack && python3 scripts/render-installer-screens.py codex-imagegen-mcp-X.Y.Z
 
 ## Releasing
 
-Releases are automated. A maintainer only has to:
+Releases are continuous delivery: `main` is always releasable, and cutting a release is one click. Nothing is published until the release commit has passed the full test matrix and its tarball has been installed and started on Linux, macOS and Windows. After publishing, the pipeline installs the release from npm the way users do and checks its provenance.
 
-1. Make sure `main` is green in CI, and run the live smoke test: `status`, one `generate`, one edit with `-b transparent`, `doctor`, `install --all --dry-run`, plus one `opencode run`.
-2. Bump `version` in `package.json` (then `npm install --package-lock-only`) and add a `## [X.Y.Z] - YYYY-MM-DD` entry to `CHANGELOG.md`, with its compare link at the bottom.
-3. Commit, then tag and push: `git tag -a vX.Y.Z -m "…" && git push origin main vX.Y.Z`.
+### Cutting a release
 
-The [release workflow](../.github/workflows/release.yml) then:
+1. **Describe changes as they land**, under `## [Unreleased]` in [CHANGELOG.md](../CHANGELOG.md). Those notes become the release notes, and CI's changelog check keeps the file in a shape the tooling can promote.
+2. **Run Prepare release.** Use *Actions › Prepare release › Run workflow* and pick the bump, or run it from a terminal:
+
+   ```bash
+   gh workflow run prepare-release.yml -f bump=patch       # or minor, major; -f version=1.0.0 for an exact one
+   gh workflow run prepare-release.yml -f dry-run=true     # show the release commit and notes, push nothing
+   ```
+
+3. **Watch the Release run it starts** (`gh run watch`). Its summary links the GitHub release and the npm page, with the verification results.
+
+> [!NOTE]
+> CI never talks to ChatGPT. When a release changes sign-in or the image client, run the [live checks](#live-testing) first; they use your quota.
+
+### The pipeline
 
 ```mermaid
 flowchart LR
-    tag(["push tag vX.Y.Z"]):::ink --> test["npm ci · npm test"]:::teal
-    test --> check{"tag = package.json<br/>version?"}:::cream
-    check -- "no" --> fail(["fail the release"]):::ochre
-    check -- "yes" --> pack["npm pack<br/>+ stable-named copy<br/>+ SHA256SUMS"]:::rust
-    pack --> notes["notes from<br/>CHANGELOG.md"]:::rust
-    notes --> attest["sign build-provenance<br/>attestation"]:::teal
-    attest --> release(["GitHub release<br/>+ announcement discussion"]):::ink
+    prep(["Prepare release<br/>bump · promote changelog<br/>wait for CI on main"]):::ink --> push["atomic push<br/>chore: release X.Y.Z<br/>+ tag vX.Y.Z"]:::rust
+    push --> plan["plan<br/>tag = package.json<br/>changelog entry · notes"]:::teal
+    plan --> test["test<br/>full CI matrix<br/>on the tag"]:::teal
+    plan --> build["build<br/>npm pack · SHA256SUMS<br/>attest provenance"]:::rust
+    build --> smoke["smoke<br/>install the tarball on<br/>Linux · macOS · Windows"]:::teal
+    test --> gh["GitHub release<br/>tarballs · notes<br/>announcement"]:::ochre
+    smoke --> gh
+    gh --> npm["npm<br/>same tarball · OIDC<br/>provenance"]:::ochre
+    npm --> verify["verify<br/>npx on 3 OSes · provenance<br/>signatures · same bytes"]:::teal
     classDef ink fill:#2A2523,stroke:#9A8C76,color:#E4D9C6
     classDef rust fill:#A6553B,stroke:#7E3F2B,color:#FFFFFF
     classDef ochre fill:#D9A05B,stroke:#B5813F,color:#2A2523
     classDef teal fill:#4E6E63,stroke:#3A544B,color:#FFFFFF
-    classDef cream fill:#E4D9C6,stroke:#A89A80,color:#2A2523
 ```
 
-Each release carries `codex-imagegen-mcp-X.Y.Z.tgz`, the same file as `codex-imagegen-mcp.tgz` (so `releases/latest/download/codex-imagegen-mcp.tgz` always points at the newest build), and `SHA256SUMS`. Anyone can verify a download with `gh attestation verify codex-imagegen-mcp-X.Y.Z.tgz --repo ShalomObongo/codex-imagegen-mcp`.
+| Stage | Workflow · job | What it guarantees |
+|---|---|---|
+| **Prepare** | [`prepare-release.yml`](../.github/workflows/prepare-release.yml) | Computes the version with npm's bump rules. Moves the `[Unreleased]` notes into `## [X.Y.Z] - date` and updates the compare links and both package files (`release.js prepare`). Waits until CI has passed on the commit being released. Then pushes the release commit and tag to `main` in one atomic push, which fails without changing anything if `main` moved meanwhile. Finally it starts the Release workflow on the tag, because tags pushed with `GITHUB_TOKEN` trigger nothing by themselves. That run is triggered on the tag, so provenance names the release commit. |
+| **Plan** | [`release.yml`](../.github/workflows/release.yml) · plan | The ref is a `vX.Y.Z` tag on `main`, `package.json` has that version, the changelog has its section (`release.js plan`), and the release notes are written. |
+| **Test** | release.yml · test | The full CI matrix (Node 22, 24 and 26; Linux, macOS, Windows) on the tag's commit, by calling `ci.yml`. |
+| **Build** | release.yml · build | `npm pack` once, with no dependency caches. It writes `SHA256SUMS` and a signed build-provenance attestation. Later stages use this exact file. |
+| **Smoke** | release.yml · smoke | [`smoke.ts`](../scripts/smoke.ts) on that tarball on Linux (Node 22 and 24), macOS and Windows. |
+| **GitHub release** | release.yml · github-release (environment `github-releases`) | The tarballs, checksums and notes, marked latest, with an announcement discussion. Re-runs skip a release that's already published with the same tarball, and remove a draft left by an interrupted attempt. |
+| **npm** | release.yml · npm (environment `npm`) | The same tarball, through [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC, no token), which also adds npm provenance. Skipped if the version is already on npm. |
+| **Verify** | [`verify-published.yml`](../.github/workflows/verify-published.yml) | Waits until npm serves the version to `npm install` and `npx`. Its install metadata can lag minutes behind the publish, which is when `npx` fails with `ETARGET`. Then `smoke.ts --registry` through `npx` on all three OSes. [`verify-published.ts`](../scripts/verify-published.ts) checks that npm's SLSA provenance names `release.yml`, the tag and its commit, and that the npm and GitHub tarballs are byte-identical. Finally `npm audit signatures` and `gh attestation verify`. |
 
-The package itself contains `dist/src`, `skill`, `docs/*.md`, `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`; the artwork is excluded to keep it small. `npm pack --dry-run` shows the list.
+Both environments accept deployments only from `v*` tags, so nothing on a branch can publish. To pause for approval before publishing, add yourself as a required reviewer of the `npm` environment in the repository settings.
+
+### Pre-releases
+
+The `prepatch`, `preminor`, `premajor` and `prerelease` bumps produce `X.Y.Z-rc.N`. A pre-release uses the `[Unreleased]` notes without moving them, is published to npm under the `next` dist-tag (`npx -y codex-imagegen-mcp@next`), and is marked as a pre-release on GitHub, so `latest` doesn't change. The matching bump finishes it: `minor` turns `1.3.0-rc.1` into `1.3.0` and promotes the notes.
+
+### When a stage fails
+
+- **Before the GitHub release**, nothing is public except the tag. Fix the cause, then either run the **Release** workflow again on the tag (*Run workflow › Use workflow from › Tags*) or cut the next version with the fix. The unpublished tag can be deleted.
+- **After it**, re-run the failed jobs. Every stage is idempotent, and the release and npm stages reuse the tarball the first attempt built and attested. Releases are immutable, so a published version is never rebuilt with different bytes.
+- **A bad release** can't be unpublished after 72 hours or edited on GitHub. Ship a fix instead. Meanwhile, move users off it with `npm dist-tag add codex-imagegen-mcp@<good> latest` and `npm deprecate codex-imagegen-mcp@<bad> "<why>"`.
+
+Pushing a `vX.Y.Z` tag by hand, with the version and changelog already committed on `main`, runs the same pipeline from **Plan** on.
+
+### Every week
+
+The Verify workflow also runs every Monday against `latest`, because a fresh install resolves dependency ranges to newer versions over time. That catches a dependency update that breaks installs of an already-published release. Run it on demand with `gh workflow run verify-published.yml -f version=X.Y.Z`.
+
+### What a release contains
+
+Each release carries `codex-imagegen-mcp-X.Y.Z.tgz`, the same file as `codex-imagegen-mcp.tgz` (so `releases/latest/download/codex-imagegen-mcp.tgz` always points at the newest build), and `SHA256SUMS`. Anyone can verify a download with `gh attestation verify codex-imagegen-mcp-X.Y.Z.tgz --repo ShalomObongo/codex-imagegen-mcp`, and an install with `npm audit signatures`.
+
+The package itself contains `dist/src`, `skill`, `docs/*.md`, `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`. The artwork, tests and release scripts are excluded to keep it small; `npm pack --dry-run` shows the list.
 
 ---
 

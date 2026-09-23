@@ -4,8 +4,24 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+Continuous delivery: releases are one click, and verified before and after publishing.
+
+### Added
+- **A release pipeline.** *Prepare release* (or `gh workflow run prepare-release.yml -f bump=patch`) bumps the version and turns the `[Unreleased]` notes into the new version's changelog section. It waits for CI to pass on `main`, pushes the release commit and tag in one atomic push, and starts the Release workflow on the tag. There:
+  - the full test matrix runs on the tag;
+  - the tarball is built once, with signed build provenance, and installed and started on Linux, macOS and Windows before anything is published;
+  - the GitHub release and the npm package publish that same file, the latter through trusted publishing;
+  - a final stage installs the published version through `npx` on all three systems. It checks that npm's provenance names the release workflow, the tag and its commit, and that npm and GitHub serve byte-identical tarballs. It also runs `npm audit signatures` and `gh attestation verify`.
+
+  Every stage can be re-run safely. Pre-releases (`-rc.N`) go to npm's `next` tag. Publishing deploys to the `github-releases` and `npm` environments, which accept only `v*` tags.
+- **An end-to-end smoke test** (`scripts/smoke.ts`), run by CI on Linux, macOS and Windows for every push. In a throwaway home it installs the packed tarball, installs into 18 tools, reads every config back, and starts the server through each one over MCP, with only a GUI app's `PATH` for GUI apps. Then it runs `doctor` and uninstalls.
+- **A weekly check of the latest release** from npm on all three systems, which catches a dependency update that breaks fresh installs.
+- **A changelog lint** in CI (`release.js check`), so a malformed changelog fails the push instead of a release.
+- `install --json` and `uninstall --json` report each config entry's key path (`key`), for scripts.
+
 ### Changed
 - The README quick start now opens with `npx -y codex-imagegen-mcp install`, so there's nothing to install first. A global install is still available, for the short `codex-imagegen-mcp` command and an absolute-Node launch. CLIENTS and SUPPORT show the npx form too.
+- Release builds no longer restore a dependency cache, as npm recommends for trusted publishing.
 
 ## [0.2.0] - 2026-09-23
 

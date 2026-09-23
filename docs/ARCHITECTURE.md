@@ -69,6 +69,8 @@ flowchart TB
 | `upstream/` | Byte-exact copy of Codex's original skill, for provenance and diffing |
 | `scripts/compose-doc-art.py` | Builds the documentation artwork from raw generations |
 | `scripts/render-installer-screens.py` | Renders the installer screenshots from a real terminal session |
+| `scripts/release.ts` | Release tooling: version bumps, promoting the changelog, release notes, the changelog lint ([Releasing](DEVELOPMENT.md#releasing)) |
+| `scripts/smoke.ts`, `scripts/verify-published.ts` | The pipeline's end-to-end checks of a packed or published version |
 
 ## Request flow: `generate_image`
 

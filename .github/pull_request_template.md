@@ -10,6 +10,6 @@
 
 - [ ] `npm test` and `npm run typecheck` pass
 - [ ] Docs are updated (README, `docs/`, the skill) if behaviour, options or output changed
-- [ ] `CHANGELOG.md` has an entry
+- [ ] `CHANGELOG.md` has an entry under `## [Unreleased]`
 - [ ] No tokens, `auth.json` contents or personal data in code, tests, logs or screenshots
 - [ ] Claims about the ChatGPT backend are measured, and recorded with a date in `docs/BACKEND.md`
