@@ -1,6 +1,6 @@
 {
   "name": "codex-imagegen-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server + Agent Skill that brings OpenAI Codex's image generation to any MCP client (opencode, Claude Code, Cursor, VS Code and more), running on your ChatGPT plan with no API key.",
   "license": "Apache-2.0",
   "author": "Shalom Obongo (https://github.com/ShalomObongo)",

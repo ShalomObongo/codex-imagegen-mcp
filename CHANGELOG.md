@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-23
+
 Continuous delivery: releases are one click, and verified before and after publishing.
 
 ### Added
@@ -169,7 +171,8 @@ First release.
   - A real device-code request (`XXXX-XXXXX` code, 5 s interval).
 - opencode 1.18.32: `opencode mcp list` shows the server connected, and the skill loads. Ran end to end with `openai/gpt-5.5` (skill → generate, transparent) and `github-copilot/claude-sonnet-5` (auth_status → 16:9 generate + transparent edit).
 
-[Unreleased]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.0...v0.1.1
