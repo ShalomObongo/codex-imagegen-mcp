@@ -11,8 +11,10 @@ The server is a local **stdio** MCP server, so any MCP client can run it: many t
 ## The installer
 
 ```bash
-codex-imagegen-mcp install                        # interactive: pick tools, review, apply, sign in
+npx -y codex-imagegen-mcp install                 # interactive: pick tools, review, apply, sign in
 ```
+
+After a global install (`npm install --global codex-imagegen-mcp`) the same command is just `codex-imagegen-mcp install`, and the configs then use an absolute Node path instead of npx ([why](#how-the-launch-command-is-chosen)). The examples below use that short form; without a global install, put `npx -y` in front.
 
 <p align="center">
   <img src="assets/screens/installer-pick.png" width="100%" alt="The interactive installer in a terminal: it found 10 of 25 supported tools and lists them grouped as terminal agents and editors, with detected ones pre-selected and a hint per tool">
@@ -73,7 +75,7 @@ Without tool names and outside a terminal, `install` exits with a hint instead o
 | `--launch` | Command written | Default for |
 |---|---|---|
 | `node` | Absolute Node + this package's `cli.js`, e.g. `/opt/homebrew/bin/node …/codex-imagegen-mcp/dist/src/cli.js serve` | Global installs from an installed package. No PATH, shim or network needed at start-up, and it works in GUI apps that don't inherit your shell `PATH`. |
-| `npx` | `npx -y codex-imagegen-mcp@0.2 serve` (pinned to the current release line) | Project files meant to be committed, and runs of `npx codex-imagegen-mcp install` |
+| `npx` | `npx -y codex-imagegen-mcp@0.2 serve` (pinned to the current release line) | Project files meant to be committed, and every run of `npx -y codex-imagegen-mcp install` |
 | `global` | `codex-imagegen-mcp serve` | Only on request; needs `npm install --global` and `node` on the tool's PATH |
 
 Adjustments per tool:

@@ -40,7 +40,7 @@
     <td width="33%" valign="top">
       <img src="docs/assets/badges/clients.png" width="76" alt=""><br>
       <b>One installer, 25+ tools</b><br>
-      <code>codex-imagegen-mcp install</code> finds your coding tools, shows every file it will touch, and edits only its own entry, keeping your comments.
+      <code>npx -y codex-imagegen-mcp install</code> finds your coding tools, shows every file it will touch, and edits only its own entry, keeping your comments.
     </td>
     <td width="33%" valign="top">
       <img src="docs/assets/badges/transparency.png" width="76" alt=""><br>
@@ -103,17 +103,35 @@ Two real opencode sessions in a scratch project. The images are exactly what cam
 > [!NOTE]
 > You need **Node.js 22+** and a **ChatGPT plan that includes Codex** (Plus, Pro, Business, Enterprise, Edu…). Codex image generation isn't available on the Free plan.
 
-**1 · Install** from npm. This puts `codex-imagegen-mcp` on your PATH.
+**1 · Run the installer.** npx fetches the latest release, so there's nothing to install first. The installer finds the coding tools on this machine, shows exactly which files it will create or change, and writes nothing until you confirm. Each config keeps its comments and formatting.
 
 ```bash
-npm install --global codex-imagegen-mcp
+npx -y codex-imagegen-mcp install
+```
+
+<p align="center">
+  <img src="docs/assets/screens/installer-pick.png" width="100%" alt="The interactive installer: it found 10 of 25 supported tools and lists them grouped as terminal agents and editors, with the detected ones pre-selected">
+</p>
+
+The configs it writes start the server through npx as well; npm downloads it on first use and caches it. The installer also runs without questions, for scripts and dotfiles:
+
+```bash
+npx -y codex-imagegen-mcp install opencode cursor claude-code   # named tools (see --list)
+npx -y codex-imagegen-mcp install --all --dry-run               # every detected tool, preview only
 ```
 
 <details>
-<summary>Other ways to install: the GitHub release, or from source</summary>
+<summary>Prefer a global install, the GitHub release, or a source checkout?</summary>
 <br>
 
-The same package, attached to every [GitHub release](https://github.com/ShalomObongo/codex-imagegen-mcp/releases) with a signed build-provenance attestation:
+A global install gives you the short `codex-imagegen-mcp` command. The installer then writes an absolute Node path instead of npx, which starts faster and doesn't depend on npx. That suits GUI apps like Claude Desktop and Cursor best:
+
+```bash
+npm install --global codex-imagegen-mcp
+codex-imagegen-mcp install
+```
+
+The same package is attached to every [GitHub release](https://github.com/ShalomObongo/codex-imagegen-mcp/releases) with a signed build-provenance attestation:
 
 ```bash
 npm install --global https://github.com/ShalomObongo/codex-imagegen-mcp/releases/latest/download/codex-imagegen-mcp.tgz
@@ -129,39 +147,24 @@ npm link                                  # puts `codex-imagegen-mcp` on your PA
 
 </details>
 
-**2 · Add it to your coding tools.** The installer finds the tools on this machine and shows exactly which files it will create or change before it touches anything. It keeps each config's comments and formatting.
+**2 · Sign in with ChatGPT.** The installer offers this at the end. Skip it if Codex or opencode is already signed in with ChatGPT.
 
 ```bash
-codex-imagegen-mcp install
+npx -y codex-imagegen-mcp login           # opens the browser; use --device on a headless machine
 ```
 
-<p align="center">
-  <img src="docs/assets/screens/installer-pick.png" width="100%" alt="The interactive installer: it found 10 of 25 supported tools and lists them grouped as terminal agents and editors, with the detected ones pre-selected">
-</p>
-
-It also runs without questions, for scripts and dotfiles:
+**3 · Check, then ask for pictures**
 
 ```bash
-codex-imagegen-mcp install opencode cursor claude-code   # named tools (see --list)
-codex-imagegen-mcp install --all --dry-run               # every detected tool, preview only
-npx -y codex-imagegen-mcp install                        # or skip step 1: configs then use npx
-```
-
-**3 · Sign in with ChatGPT.** The installer offers this at the end. Skip it if Codex or opencode is already signed in with ChatGPT.
-
-```bash
-codex-imagegen-mcp login                  # opens the browser; use --device on a headless machine
-```
-
-**4 · Check, then ask for pictures**
-
-```bash
-codex-imagegen-mcp doctor                 # Node, credentials, quota, and every tool it's installed in
+npx -y codex-imagegen-mcp doctor          # Node, credentials, quota, and every tool it's installed in
 ```
 
 ```text
 you › Make a 16:9 hero image of a lighthouse at dusk and save it to assets/hero.png
 ```
+
+> [!TIP]
+> From here on, commands use the short `codex-imagegen-mcp` from a global install. Without one, run them through npx the same way, for example `npx -y codex-imagegen-mcp status`.
 
 ## How it works
 

@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- The README quick start now opens with `npx -y codex-imagegen-mcp install`, so there's nothing to install first. A global install is still available, for the short `codex-imagegen-mcp` command and an absolute-Node launch. CLIENTS and SUPPORT show the npx form too.
+
 ## [0.2.0] - 2026-09-23
 
 One installer for every coding tool.
