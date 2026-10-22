@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- Update the MCP SDK from 1.30.0 to 1.32.1, smol-toml from 1.9.0 to 1.9.1, and Zod from 4.6.5 to 4.6.6.
+- Update Node.js type definitions from 26.6.2 to 26.6.3.
+- Update pinned GitHub Actions for Node.js setup and artifact upload/download.
+
+### Security
+- Update the transitive Hono dependency from 4.13.8 to 4.13.13, including upstream security fixes.
+
 ## [0.2.2] - 2026-09-23
 
 ### Changed
