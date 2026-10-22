@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-22
+
 ### Changed
 - Update the MCP SDK from 1.30.0 to 1.32.1, smol-toml from 1.9.0 to 1.9.1, and Zod from 4.6.5 to 4.6.6.
 - Update Node.js type definitions from 26.6.2 to 26.6.3.
@@ -188,7 +190,8 @@ First release.
   - A real device-code request (`XXXX-XXXXX` code, 5 s interval).
 - opencode 1.18.32: `opencode mcp list` shows the server connected, and the skill loads. Ran end to end with `openai/gpt-5.5` (skill → generate, transparent) and `github-copilot/claude-sonnet-5` (auth_status → 16:9 generate + transparent edit).
 
-[Unreleased]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ShalomObongo/codex-imagegen-mcp/compare/v0.1.2...v0.2.0
